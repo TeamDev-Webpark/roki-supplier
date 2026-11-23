@@ -13,7 +13,7 @@ run('direct sourcing menus for all nine accounts',async({base,context,shot})=>{
  }
  await switchTo(p,base,'roki','r-issue','schedule');await p.evaluate(()=>I18N.set('th'));await shot(p,'webpark-direct-review-schedule-th.png',{fullPage:false});
  await p.locator('[data-desk-filter="cadence"][data-desk-key="schedule"]').selectOption('1');const id=await p.evaluate(()=>db.items.find(i=>i.demoScenario==='direct-1').id);await p.locator(`[data-select="${id}"]`).check();await p.locator('[data-action="notify"]').click();await shot(p,'webpark-direct-request-form-th.png',{fullPage:false});
- await p.locator('[data-action="close"]').first().click();await p.goto(base+'roki.html#formulas');await shot(p,'webpark-formula-library-th.png',{fullPage:false});
+ await p.locator('[data-rfq-cancel]').click();   /* the request form is a page now: Cancel returns to where it was opened */await p.goto(base+'roki.html#formulas');await shot(p,'webpark-formula-library-th.png',{fullPage:false});
  for(const route of ['#schedule','#request-register','#formulas','#records']){
   await p.setViewportSize({width:390,height:844});await p.goto(base+'roki.html'+route);assert.equal(await p.evaluate(()=>document.documentElement.scrollWidth>innerWidth+1),false,'Mobile '+route);
  }

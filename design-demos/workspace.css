@@ -262,3 +262,13 @@ input.mono{font-size:12px}
 @media(max-width:900px){.direct-flow{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:600px){.direct-flow{grid-template-columns:1fr}.records-grid{grid-template-columns:1fr}.request-spec{padding:12px}.request-spec .form-grid{grid-template-columns:1fr}.request-spec .fm-wide{grid-column:auto}}
 .dialog:has(.request-specs){display:flex;flex-direction:column;max-height:90vh;overflow:hidden}.dialog:has(.request-specs)>.dialog-header,.dialog:has(.request-specs)>.dialog-footer{flex-shrink:0}.dialog:has(.request-specs)>.dialog-body{overflow:auto;min-height:0}.dialog:has(.request-specs)>.dialog-footer{background:#fff;box-shadow:0 -4px 12px rgba(21,49,85,.04)}
 .fm-aside .data-table{width:100%;min-width:0;table-layout:fixed}.fm-aside .data-table th{white-space:normal;line-height:1.6}.fm-aside .data-table :is(th,td){padding:10px 8px;overflow-wrap:anywhere}
+/* Linked sub-part prices in the cost form */
+.link-note{display:block;margin-top:4px;font-size:9px;color:#6d7e92;white-space:nowrap}
+.link-note.bad{color:var(--red)}
+.link-note .link-button{font-size:9px}
+.cost-table input[readonly]{background:#f3f6fa;color:#5b6c80}
+
+/* Request form page (was a popup) */
+.rfq-form-page .body-pad{max-width:1040px}
+.rfq-form-actions{position:sticky;bottom:0;display:flex;justify-content:flex-end;gap:10px;flex-wrap:wrap;padding:16px 24px;background:#fff;border-top:1px solid var(--line);border-radius:0 0 9px 9px}
+.rfq-form-actions .button{width:auto}

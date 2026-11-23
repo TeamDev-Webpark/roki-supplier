@@ -58,6 +58,7 @@ function compileExpr(src){
 
 /* ---------- rounding ---------- */
 function roundBy(v,mode,d){
+  if(mode==='none')return v;                       /* keep full precision (Excel sheets show 2 decimals but do not round) */
   const f=10**d;
   if(mode==='truncate')return Math.floor(v*f+1e-7)/f;
   if(mode==='ceil')return Math.ceil(v*f-1e-7)/f;
@@ -103,28 +104,99 @@ function defaultFormats(){
     ])
   };
 }
+/* Customer formula sets. A quotation FORMAT (Single Part / Assembly) can follow different customer sheets, each its own formula set:
+   Injection, Rubber and Steel are the three Single Part sheets of docs/sample -QT.xls (Excel never rounds between steps);
+   the standard set keeps the older paper form (rounded lines, profit on subtotal); “Assembly · QT-ASSY” follows docs/QT-ASSY.pdf
+   (every line rounded to 2 decimals, Common / New investment, repayment, per-line maintenance). */
 const FORMULA_FORMATS=['Single Part','Assembly'];
+const CH=(key,label,options,def,flags)=>fld(key,label,'choice',options,{def,...flags});
+const LOSS_OPTS=['Not included','Included'],REPAID_OPTS=['Not repaid','Repaid'],INV_OPTS=['New investment','Common tool'];
+/* v2: the three Excel sheets + the QT-ASSY paper form. Excel does not round between steps; QT-ASSY rounds every line. */
+function customerSheetFormats(){
+  const adj=(key,label,percent,extra)=>({key,label,percent,of:'self',lock:false,...extra});
+  const noRound={decimals:2,row:'none',section:'none',profit:'none',spare:'none',total:'round'};
+  const sheet=kind=>{
+    const lossDef=kind==='Steel'?0:3,perLinePM=kind!=='Injection';
+    const equip=[fld('name','Dies & jig','text',null,{req:true}),fld('origin','Imp / Loc','origin',LOCAL_IMPORT),CH('invType','Investment type',INV_OPTS,INV_OPTS[0]),fld('cavity','Cavity','number',null,{positive:true,def:1}),fld('amount','Dies & jig cost · THB','number'),fld('volume','Volume · pcs','number',null,{positive:true,def:1}),CH('repaid','Tool repayment',REPAID_OPTS,REPAID_OPTS[0])];
+    if(perLinePM)equip.push(fld('pm','Maintenance / interest %','number',null,{def:5}));
+    return {qtyLabel:'Quantity / year',sections:[
+      {key:'material',letter:'A',label:'Material',expr:'(weight+scrap)*rate*(1+loss/100)',
+        fields:[fld('code','Material code / spec','text'),fld('name','Material name','text',null,{req:true}),fld('origin','Imp / Loc','origin',LOCAL_IMPORT),fld('weight','Part wt · kg','number'),fld('scrap','Scrap wt · kg','number'),fld('rate','Cost · THB/kg','number'),fld('loss','Loss %','number',null,{def:lossDef,fromAdj:'materialLoss'})],adj:[]},
+      {key:'components',letter:'B',label:'Component parts',expr:'qty*rate*(1+loss/100)',
+        fields:[fld('partNo','Part no.','text',null,{req:true}),fld('name','Part name','text',null,{req:true}),fld('origin','Import / Local / Supply','origin',ORIGIN3),fld('qty','Qty','number',null,{def:1}),fld('rate','Price · THB','number'),fld('loss','Loss %','number',null,{def:lossDef,fromAdj:'componentLoss'})],adj:[]},
+      {key:'process',letter:'C',label:'Process',expr:'rate*time/cavity',
+        fields:[fld('name','Process','text',null,{req:true}),fld('machine','M/C','text'),fld('cavity','Cavity','number',null,{positive:true,def:1}),fld('time','Time · sec','number'),fld('rate','Charge · THB/sec','number')],adj:[]},
+      {key:'packing',letter:'D',label:'Packing & transport',expr:'amount*perPiece/qty*(1+pm/100)',
+        fields:[fld('name','Type','text',null,{req:true}),fld('amount','Cost · THB','number'),fld('perPiece','Used per piece','number',null,{def:1}),fld('qty','Shared over qty · pcs','number',null,{positive:true,def:1}),fld('pm','Maintenance %','number',null,{def:0})],adj:[]},
+      {key:'equipment',letter:'E',label:'Equipment',expr:perLinePM?'amount/volume*((1-repaid)+pm/100)':'amount/volume*(1-repaid)',
+        fields:equip,adj:perLinePM?[]:[adj('pm','PM / interest',5,{of:'process'})]}
+    ],profit:{percent:15,base:'process',bases:['process','subtotal'],lock:false},spare:{percent:15,base:'process',lock:false},rounding:{...noRound},total:'subtotal+profit+spare'};
+  };
+  const asm={qtyLabel:'Monthly quantity',sections:[
+    {key:'components',letter:'A',label:'Component parts',expr:'rate*qty',
+      fields:[fld('partNo','Part no.','text',null,{req:true}),fld('name','Part name','text',null,{req:true}),fld('origin','Imp / Loc','origin',LOCAL_IMPORT),fld('rate','Unit cost · THB','number'),fld('qty','Qty','number',null,{def:1})],adj:[adj('management','Management',0.5)]},
+    {key:'material',letter:'B',label:'Material',expr:'(weight+runner)*rate',
+      fields:[fld('name','Material','text',null,{req:true}),fld('origin','Imp / Loc','origin',LOCAL_IMPORT),fld('weight','Part wt · kg','number'),fld('runner','Runner wt · kg','number'),fld('rate','THB / kg','number'),CH('lossApplies','Loss',LOSS_OPTS,LOSS_OPTS[1])],adj:[adj('loss','Material loss',3,{of:'rows:lossApplies'})]},
+    {key:'process',letter:'C',label:'Process',expr:'rate*time/cavity',
+      fields:[fld('name','Process','text',null,{req:true}),fld('machine','M/C','text'),fld('cavity','Cavity','number',null,{positive:true,def:1}),fld('time','CT · sec','number'),fld('rate','Cost/CT · THB/sec','number')],adj:[]},
+    {key:'investment',letter:'D',label:'Investment',expr:'(common+newInv)/volume*(1-repaid)+pm/100*if(pmBase>0,pmBase,(common+newInv)/volume)',
+      fields:[fld('name','Mold / die / jig','text',null,{req:true}),fld('origin','Imp / Loc / Supply','origin',ORIGIN3),fld('common','Common investment · THB','number'),fld('newInv','New investment · THB','number',null,{alias:['amount']}),fld('volume','Volume · pcs','number',null,{positive:true,def:1}),CH('repaid','Tool repayment',REPAID_OPTS,REPAID_OPTS[0]),fld('pm','Maintenance %','number',null,{def:0}),fld('pmBase','Maintenance base · THB/pc','number',null,{def:0})],adj:[]},
+    {key:'packing',letter:'E',label:'Packing & transport',expr:'amount*perPiece/qty*(1+pm/100)',
+      fields:[fld('name','Type','text',null,{req:true}),fld('amount','Cost · THB','number'),fld('perPiece','Used per piece','number',null,{def:1}),fld('qty','Qty · pcs','number',null,{positive:true,def:1}),fld('pm','Maintenance %','number',null,{def:0})],adj:[]}
+  ],profit:{percent:15,base:'process',bases:['process','subtotal'],lock:false},spare:{percent:0,base:'process',lock:false},rounding:{decimals:2,row:'round',section:'round',profit:'truncate',spare:'truncate',total:'round'},total:'subtotal+profit+spare'};
+  return {injection:sheet('Injection'),rubber:sheet('Rubber'),steel:sheet('Steel'),'assembly-qt':asm};
+}
+/* Sets: the two built-in ones (as before) plus one per customer sheet. Every version carries both formats so editors never meet a gap. */
+const CUSTOMER_SETS=[
+  {id:'injection',name:'Injection · ตัวอย่าง QT (Excel)',format:'Single Part',note:'Sheet “single part -Inj”: PM 5% of the process cost (C), loss 3% per line, no rounding between steps.'},
+  {id:'rubber',name:'Rubber · ตัวอย่าง QT (Excel)',format:'Single Part',note:'Sheet “single part -rubber”: interest 5% of each die’s cost per piece, loss 3% per line.'},
+  {id:'steel',name:'Steel · ตัวอย่าง QT (Excel)',format:'Single Part',note:'Sheets “steel-com / sub part”: interest on each die, sub-part prices linked into the parent, repaid tools keep their interest.'},
+  {id:'assembly-qt',name:'ชุดประกอบ · QT-ASSY (กระดาษ)',format:'Assembly',note:'QT-ASSY.pdf: lines rounded to 2 decimals, Common / New investment, repayment, maintenance per line.'}
+];
 function defaultFormulaStore(){
-  return {current:1,versions:[{version:1,effective:'2026-01-01',by:'System',at:'01 Jan 2026',reason:'Initial formulas taken from ROKI’s quotation sheets.',changes:[],formats:defaultFormats()}]};
+  const base=defaultFormats(),sheets=customerSheetFormats(),clone=o=>JSON.parse(JSON.stringify(o));
+  const assembly=clone(base);assembly.Assembly.profit.percent=8;
+  const versions=[
+    {version:1,setId:'standard',effective:'2026-01-01',by:'System',at:'01 Jan 2026',reason:'Initial formulas taken from ROKI’s quotation sheets.',changes:[],formats:base},
+    {version:2,setId:'assembly',effective:'2026-01-01',by:'WEBPARK',at:'01 Jan 2026',reason:'Separate assembly pricing model',changes:[],formats:assembly}
+  ];
+  const sets=[{id:'standard',name:'สูตรมาตรฐานชิ้นส่วน',formats:['Single Part','Assembly'],current:1},{id:'assembly',name:'สูตรชุดประกอบ',formats:['Assembly'],current:2}];
+  CUSTOMER_SETS.forEach((c,k)=>{
+    const formats=clone(base);formats[c.format]=clone(sheets[c.id]);
+    versions.push({version:3+k,setId:c.id,effective:'2026-01-01',by:'System',at:'01 Jan 2026',reason:c.note,changes:[],formats});
+    sets.push({id:c.id,name:c.name,formats:[c.format],current:3+k});
+  });
+  return {current:1,sets,versions};
 }
 let FORMULAS=defaultFormulaStore();
 const setFormulaStore=s=>{FORMULAS=s&&s.versions&&s.versions.length?s:defaultFormulaStore()};
 const currentFormulas=()=>FORMULAS.versions.find(v=>v.version===FORMULAS.current)||FORMULAS.versions.at(-1);
 const formulaVersion=n=>FORMULAS.versions.find(v=>v.version===n)||FORMULAS.versions[0];
-const fmtCfg=format=>currentFormulas().formats[format||'Single Part'];
-const cfgOf=c=>formulaVersion(c.fv||1).formats[c.format||'Single Part'];
+const cfgIn=(version,format)=>version.formats[format||'Single Part'];
+const fmtCfg=format=>cfgIn(currentFormulas(),format);
+const cfgOf=c=>cfgIn(formulaVersion(c.fv||1),c.format);
 const sectionsOf=c=>cfgOf(c).sections;
 const isPositive=f=>!!(f[4]&&f[4].positive),isRequired=f=>!!(f[4]&&f[4].req);
 
-/* one row → amount, using the section's formula */
+/* one row → amount, using the section's formula. Choice columns count as 0 / 1 / 2… (their position in the options). */
 function expenseOf(s,r){
-  const env={};for(const f of s.fields)if(f[2]==='number')env[f[0]]=num(r[f[0]]);
+  const env={};
+  for(const f of s.fields){
+    if(f[2]==='number')env[f[0]]=num(r[f[0]]);
+    else if(f[2]==='choice'||f[2]==='origin')env[f[0]]=Math.max(0,(f[3]||[]).indexOf(r[f[0]]));
+  }
   return compileExpr(s.expr).fn(env);
 }
-const rowExpenseOf=(c,key,r)=>{const s=sectionsOf(c).find(s=>s.key===key);return s?expenseOf(s,r):0};
+/* the amount of a row as it is added up: rounded line by line when the formula set says so (QT-ASSY paper form) */
+const rowAmount=(cfg,s,r)=>roundBy(expenseOf(s,r),cfg.rounding.row||'none',cfg.rounding.decimals);
+const amountOf=(c,s,r)=>rowAmount(cfgOf(c),s,r);
+const rowExpenseOf=(c,key,r)=>{const s=sectionsOf(c).find(s=>s.key===key);return s?amountOf(c,s,r):0};
 function blankRow(s){
   const row={};
-  for(const f of s.fields)row[f[0]]=f[2]==='number'?((f[4]&&f[4].def)||0):f[2]==='origin'?f[3][0]:'';
+  for(const f of s.fields){
+    const flags=f[4]||{};
+    row[f[0]]=f[2]==='number'?(flags.def||0):(f[2]==='origin'||f[2]==='choice')?(flags.def!==undefined?flags.def:f[3][0]):'';
+  }
   return row;
 }
 const sectionLabel=s=>`${s.label} (${s.letter})`;
@@ -134,21 +206,33 @@ function profitBase(c,cfg=cfgOf(c)){const sec=cfg.sections.find(s=>s.key===c.bas
 function spareBase(c,cfg=cfgOf(c)){const sec=cfg.sections.find(s=>s.key===cfg.spare.base)||cfg.sections.find(s=>s.key==='process')||cfg.sections[0];return {key:sec.key,label:sectionLabel(sec),short:sec.letter}}
 const priceBaseOptions=c=>{const cfg=cfgOf(c);return cfg.profit.bases.map(k=>k==='subtotal'?{value:'subtotal',label:'Subtotal'}:{value:k,label:sectionLabel(cfg.sections.find(s=>s.key===k)||{label:k,letter:'?'})})};
 
-/* new empty costs for a format, bound to the current formula version */
-function blankCosts(format){
-  const cfg=fmtCfg(format),c={format,fv:currentFormulas().version,profit:cfg.profit.percent,basis:cfg.profit.base,spare:cfg.spare.percent};
+/* new empty costs for a quotation format, bound to a formula version (a version object or number; default: the current one) */
+const versionOf=v=>!v?currentFormulas():typeof v==='object'?v:formulaVersion(Number(v));
+function blankCosts(format,version){
+  format=format==='Assembly'?'Assembly':'Single Part';
+  const ver=versionOf(version),cfg=cfgIn(ver,format),c={format,fv:ver.version,profit:cfg.profit.percent,basis:cfg.profit.base,spare:cfg.spare.percent};
   for(const s of cfg.sections){
     c[s.key]=(s.letter==='A'||s.key==='process')?[blankRow(s)]:[];
     for(const a of s.adj||[]){c[a.key]=a.percent;if(a.ofKey)c[a.ofKey]=a.of}
   }
   return c;
 }
-/* costs entered under an older formula version, carried over to the current one:
-   rows keep the values of columns that still exist; locked percentages follow the formula set */
-function adaptCosts(old,format){
-  const out=blankCosts(format),cfg=fmtCfg(format);
+/* costs entered under an older formula version or another formula set, carried over to the given version:
+   rows keep the values of columns that still exist (or their old names), a new per-line % takes the old section-level %,
+   locked percentages follow the formula set. Links to sub-part quotations are kept. */
+function adaptCosts(old,format,version){
+  const out=blankCosts(format,version),cfg=cfgIn(versionOf(version),out.format);
   for(const s of cfg.sections){
-    if(Array.isArray(old[s.key]))out[s.key]=old[s.key].map(r=>{const n=blankRow(s);for(const f of s.fields)if(r[f[0]]!==undefined&&r[f[0]]!==null)n[f[0]]=r[f[0]];return n});
+    if(Array.isArray(old[s.key]))out[s.key]=old[s.key].map(r=>{
+      const n=blankRow(s);
+      for(const f of s.fields){
+        const flags=f[4]||{},names=[f[0],...(flags.alias||[])],at=names.find(k=>r[k]!==undefined&&r[k]!==null);
+        if(at)n[f[0]]=r[at];
+        else if(flags.fromAdj&&old[flags.fromAdj]!==undefined)n[f[0]]=old[flags.fromAdj];
+      }
+      if(r.link){n.link=r.link;if(r.linkQuote)n.linkQuote=r.linkQuote}
+      return n;
+    });
     for(const a of s.adj||[]){
       if(!a.lock&&old[a.key]!==undefined)out[a.key]=old[a.key];
       if(a.ofKey&&old[a.ofKey]!==undefined&&a.choices.some(x=>x.value===old[a.ofKey]))out[a.ofKey]=old[a.ofKey];
@@ -163,12 +247,18 @@ const seedCosts=format=>blankCosts(format);
 
 function totals(c,cfgOverride){
   const cfg=cfgOverride||cfgOf(c),secs=cfg.sections,rd=cfg.rounding,d=rd.decimals,base={},out={sections:{}};
-  for(const s of secs)base[s.key]=(c[s.key]||[]).reduce((t,r)=>t+expenseOf(s,r),0);
+  const amt=(s,r)=>roundBy(expenseOf(s,r),rd.row||'none',d);
+  for(const s of secs)base[s.key]=(c[s.key]||[]).reduce((t,r)=>t+amt(s,r),0);
   for(const s of secs){
     let extra=0;
     for(const a of s.adj||[]){
       const target=a.choices?adjChoice(c,a).of:a.of;
-      const of=target==='self'?base[s.key]:(base[target]??0);
+      let of;
+      if(target==='self')of=base[s.key];
+      else if(String(target).startsWith('rows:')){       /* only rows whose Yes/No column says “Included” */
+        const key=target.slice(5),f=s.fields.find(x=>x[0]===key);
+        of=(c[s.key]||[]).reduce((t,r)=>t+(f&&(f[3]||[]).indexOf(r[key])===1?amt(s,r):0),0);
+      }else of=base[target]??0;
       extra+=of*num(c[a.key])/100;
     }
     const value=roundBy(base[s.key]+extra,rd.section,d);
@@ -180,7 +270,8 @@ function totals(c,cfgOverride){
   out.spare=roundBy(valueOf(spareBase(c,cfg).key)*num(c.spare)/100,rd.spare,d);
   const env={subtotal:out.subtotal,profit:out.profit,spare:out.spare};
   for(const s of secs){env[s.letter]=out[s.letter];env[s.key]=out[s.letter]}
-  out.total=roundBy(compileExpr(cfg.total).fn(env),rd.total,d);
+  out.totalRaw=compileExpr(cfg.total).fn(env);          /* before the final rounding: what a linked parent quotation uses, as in the Excel sheets */
+  out.total=roundBy(out.totalRaw,rd.total,d);
   return out;
 }
 
@@ -205,30 +296,32 @@ function validateFormatConfig(cfg){
   const errors=[],keys=new Set(),adjKeys=new Set();
   const rd=cfg.rounding;
   if(!Number.isInteger(rd.decimals)||rd.decimals<0||rd.decimals>4)errors.push('Decimals must be between 0 and 4.');
-  for(const k of ['section','profit','spare','total'])if(!['round','truncate','ceil'].includes(rd[k]))errors.push('Choose a rounding rule for every amount.');
+  for(const k of ['row','section','profit','spare','total'])if(!(k==='row'&&rd[k]===undefined)&&!['none','round','truncate','ceil'].includes(rd[k]))errors.push('Choose a rounding rule for every amount.');
   for(const s of cfg.sections){
     const label=s.letter+' · '+(s.label||'?');
     if(!String(s.label||'').trim())errors.push('Each section needs a label.');
     if(keys.has(s.key))errors.push(label+': section keys must be unique.');keys.add(s.key);
-    const fkeys=new Set(),numeric=new Set();
+    const fkeys=new Set(),numeric=new Set(),usable=new Set(),choices=new Set();
     for(const f of s.fields){
       if(!/^[a-z][A-Za-z0-9]*$/.test(f[0]))errors.push(label+': column keys must start with a lowercase letter and use only letters and digits.');
       if(fkeys.has(f[0]))errors.push(label+': column keys must be unique.');fkeys.add(f[0]);
       if(!String(f[1]||'').trim())errors.push(label+': each column needs a label.');
-      if(f[2]==='number')numeric.add(f[0]);
+      if(f[2]==='number'){numeric.add(f[0]);usable.add(f[0])}
+      if(f[2]==='choice'||f[2]==='origin'){usable.add(f[0]);if(f[2]==='choice')choices.add(f[0])}
     }
     if(!numeric.size)errors.push(label+': add at least one number column.');
     const ex=compileExpr(s.expr);
     if(ex.error)errors.push(label+': '+ex.error);
     else{
-      for(const v of ex.vars)if(!numeric.has(v))errors.push(label+': the formula uses “'+v+'”, which is not one of its number columns.');
-      const env={};numeric.forEach(k=>{env[k]=1});
+      for(const v of ex.vars)if(!usable.has(v))errors.push(label+': the formula uses “'+v+'”, which is not one of its number columns.');
+      const env={};usable.forEach(k=>{env[k]=1});
       if(!Number.isFinite(ex.fn(env)))errors.push(label+': the formula gives an invalid result with sample values.');
     }
     for(const a of s.adj||[]){
       if(!String(a.label||'').trim())errors.push(label+': each adjustment needs a label.');
       if(adjKeys.has(a.key)||fkeys.has(a.key))errors.push(label+': adjustment keys must be unique.');adjKeys.add(a.key);
       if(!pctOk(Number(a.percent)))errors.push('Percentages must be between 0 and 100.');
+      if(!a.choices&&String(a.of).startsWith('rows:')&&!choices.has(String(a.of).slice(5)))errors.push(label+': an adjustment refers to a Yes / No column that does not exist.');
     }
   }
   const secKeys=cfg.sections.map(s=>s.key);
@@ -290,8 +383,8 @@ const snapshotOf=q=>q?{quote:q.id,revision:q.revision,total:q.total,costs:struct
 
 /* ---------- Demo data, transcribed from the sample Excel / PDF quotations in docs/ ---------- */
 function seed(){
-  const SP=o=>Object.assign(blankCosts('Single Part'),{material:[],components:[],process:[],packing:[],equipment:[],materialLoss:0,componentLoss:0,pm:0,spare:0},o);
-  const AS=o=>Object.assign(blankCosts('Assembly'),o);
+  const SP=o=>Object.assign(blankCosts('Single Part',formulaVersion(1)),{material:[],components:[],process:[],packing:[],equipment:[],materialLoss:0,componentLoss:0,pm:0,spare:0},o);
+  const AS=o=>Object.assign(blankCosts('Assembly',formulaVersion(1)),o);
   const items=[
     {id:'i1',code:'17230-KWN-9000',name:'IJ COVER, AIR/C',supplier:'s1',format:'Single Part',rtp:'S001571-004-01',drawing:'M206-F-26',qty:25000,next:'2026-11-01',cadence:3},
     {id:'i2',code:'17253-KWN-9000',name:'TUBE, AIR CONN',supplier:'s2',format:'Single Part',rtp:'PRC0006-046-E20',drawing:'M206-F-26',qty:25000,next:'2026-11-18',cadence:3},

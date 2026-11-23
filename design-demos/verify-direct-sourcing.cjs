@@ -3,7 +3,7 @@ const {run,login,switchTo,store,approveStep,assert}=require('./_env.cjs');
 run('direct sourcing, formula libraries and fixed blank forms',async({base,context})=>{
  const p=await context.newPage();await login(p,base,'roki','r-issue','formulas');
  const initial=await store(p),original=initial.quotes.find(q=>q.status==='Approved');
- assert((await p.locator('#formula-set option').count())>=2);
+ assert((await p.locator('#formula-set option').count())>=1);assert.equal(await p.locator('#formula-set option[value="assembly"]').count(),0,'Assembly-only sets stay in the Assembly category');
  await p.locator('[data-create-formula]').click();await p.locator('#formula-name').fill('Quarterly component model');await p.locator('[data-save-formula-set="new"]').click();
  const setId=await p.locator('#formula-set').inputValue();assert.notEqual(setId,'standard');
  const versionCount=(await store(p)).formulas.versions.length;

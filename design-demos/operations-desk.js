@@ -65,27 +65,35 @@ function deskNavBadge(id){
 }
 function workflowNav(){
  const n=(icon,id,en,th,group)=>[icon,id,wfText(en,th),group];
+ const approvals=['Check','Approve'].includes(user.role)?[
+  n('check','approvals',user.role==='Check'?'Pending checks':'Pending approvals',user.role==='Check'?'รอตรวจสอบ (Check)':'รออนุมัติ (Approve)','approval')
+ ]:[];
  return portal==='roki'?[
  n('grid','overview','Overview','ภาพรวม',''),
+ ...approvals,
  n('clock','schedule','Due for review','รายการถึงรอบทบทวน','planning'),
  n('file','schedule-active','Active schedules','กำหนดการที่ใช้งาน','planning'),
  ...(user.role==='Issue'?[n('plus','request-new','First-time request','สร้างคำขอครั้งแรก','planning')]:[]),
  n('file','request-register','Request tracking','ติดตามคำขอทั้งหมด','requests'),
- ...(['Check','Approve'].includes(user.role)?[n('check','approvals',user.role==='Check'?'My cost checks':'My price approvals',user.role==='Check'?'งานตรวจต้นทุนของฉัน':'งานอนุมัติราคาของฉัน','requests')]:[]),
  n('compare','quotes','Quotations','ใบเสนอราคา','requests'),
  n('box','parts','Parts & assemblies','ชิ้นส่วนและชุดประกอบ','reference'),n('settings','formulas','Formula library','คลังสูตรคำนวณ','reference'),n('chart','records','Reports & history','รายงานและประวัติ','reference')]:[
- n('grid','overview','Overview','ภาพรวม',''),n('bell','requests','Received requests','คำขอที่ได้รับ','requests'),n('check','approvals',user.role==='Issue'?'My cost entries':'My approvals',user.role==='Issue'?'งานกรอก / แก้ไขต้นทุน':'งานอนุมัติของฉัน','requests'),n('file','quotes','Quotations','ใบเสนอราคา','requests'),n('compare','sent','Submitted quotations','ติดตามใบที่ส่งกลับ','requests'),n('box','parts','Assigned parts','ชิ้นส่วนที่รับผิดชอบ','reference'),n('chart','records','Reports & history','รายงานและประวัติ','reference')];
+ n('grid','overview','Overview','ภาพรวม',''),
+ ...approvals,
+ n('bell','requests','Received requests','คำขอที่ได้รับ','requests'),
+ ...(user.role==='Issue'?[n('check','approvals','My cost entries','งานกรอก / แก้ไขต้นทุน','requests')]:[]),
+ n('file','quotes','Quotations','ใบเสนอราคา','requests'),n('compare','sent','Submitted quotations','ติดตามใบที่ส่งกลับ','requests'),n('box','parts','Assigned parts','ชิ้นส่วนที่รับผิดชอบ','reference'),n('chart','records','Reports & history','รายงานและประวัติ','reference')];
 }
-function workflowGroup(key){return ({planning:wfText('Review planning','กำหนดการและสร้างคำขอ'),requests:wfText('Requests and purchase prices','คำขอและราคาซื้อ'),reference:wfText('Reference information','ข้อมูลอ้างอิง')})[key]||''}
+function workflowGroup(key){return ({approval:wfText('Checks and approvals','การตรวจสอบและอนุมัติ'),planning:wfText('Review planning','กำหนดรอบและสร้างคำขอ'),requests:wfText('Requests and purchase prices','คำขอและราคาซื้อ'),reference:wfText('Reference information','ข้อมูลอ้างอิง')})[key]||''}
 function recordParentPage(page){
  if(page==='request-detail'||page==='process')return portal==='roki'?'request-register':'requests';
  if(page==='request-new'&&route().split('/')[1])return 'request-register';
+ if(page==='request-form')return route().split('/')[1]?'request-register':'request-new';
  if(['quote','print'].includes(page)){const q=visibleQuotes().find(q=>q.id===route().split('/')[1]);return q&&workflowQueue(q)&&navs().some(n=>n[1]==='approvals')?'approvals':'quotes'}
  return ({part:'parts',supplier:'records',account:'records','price-record':'records','formula-version':'formulas',reports:'records',history:'records',outbox:'records',exports:'records',suppliers:'records'})[page]||page;
 }
 function workflowCanOpen(page){
  if(['schedule','schedule-active'].includes(page))return portal==='roki';
- if(page==='request-new')return rfqCanCreate();
+ if(page==='request-new'||page==='request-form')return rfqCanCreate();
  if(['request-drafts','request-dispatch','internal-pending','request-review'].includes(page))return false;
  if(['supplier-waiting','request-tracking','suppliers','exports'].includes(page))return portal==='roki';
  return ['quote','print','process',...recordDetailPages,'records','reports','history','outbox'].includes(page)||(['new','edit'].includes(page)?portal==='supplier'&&user.role==='Issue':navs().some(n=>n[1]===page));

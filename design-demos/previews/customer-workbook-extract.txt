@@ -1,0 +1,242 @@
+SHEET single part -Inj
+B1:ROKI (THAILAND) Co.,Ltd. | K1:D
+B2:SIAM EASTERN INDUSTRIAL PARK
+B3:60/3 MOO 3 MABYANGPORN, PLUAKDAENG, RAYONG 21140
+B4:TEL: +66-3-8891594  FAX: +66-3-8891318
+A5:Supplier Code:  | B5:40110020.0 | D5:Supplier Name : GENERAL CHIEMICALS (THAILAND) | L5:Supplier Code:  | M5:40110020.0 | O5:Supplier Name : GENERAL CHIEMICALS (THAILAND)
+A6:Cost  Original  | L6:Cost  Original 
+A7:Date:  15.01.2026 | C7:Part No.  | F7:17230-KWN-9000 | H7:Rev. No. | J7:Qty/Y | L7:Date:  15.03.2026 | N7:Part No.  | Q7:17230-KWN-9000 | S7:Rev. No. | U7:Qty/Y
+A8:RTP.Code: S001571-004-01 | C8:Part Name | F8:IJ COVER,AIR/C | H8:M206-F-26 | J8:25000.0 | L8:RTP.Code: S001571-004-01 | N8:Part Name | Q8:IJ COVER,AIR/C | S8:M206-F-26 | U8:25000.0
+A9:Zone Material  Breakdown (A) | L9:Zone Material  Breakdown (A)
+A10:Material  | B10:Material  | C10:Part | D10:Scrap | F10:Total | G10:Material | H10:Imp | I10:Loc | J10:COST | L10:Material  | M10:Material  | N10:Part | O10:Scrap | Q10:Total | R10:Material | S10:Imp | T10:Loc | U10:COST
+A11:Code | B11:Name | C11:Weight(kg)  | D11:Weight(kg)  | F11:Weight(kg)  | G11:cost/kg | L11:Code | M11:Name | N11:Weight(kg)  | O11:Weight(kg)  | Q11:Weight(kg)  | R11:cost/kg
+A12:EKC0006-016-D10 | B12:TTR-50 | C12:0.135 | D12:0.013 | F12:0.14800000000000002 | G12:56.0 | I12:X | K12:8.288 | L12:EKC0006-016-D10 | M12:TTR-50 | N12:0.135 | O12:0.013 | Q12:0.14800000000000002 | R12:60.0 | T12:X | V12:8.88
+A13:loss  | B13:0.03 | K13:0.24864 | L13:loss  | M13:0.03 | V13:0.2664
+A19:Total  | I19:8.53664 | L19:Total  | T19:9.146400000000002
+A20:Component Part Breakdown (B) | L20:Component Part Breakdown (B)
+A21:Material  | B21:Part no | D21:Part name | F21:Import | G21:Local | H21:Supply | I21:Qty | J21:Price | L21:Material  | M21:Part no | O21:Part name | Q21:Import | R21:Local | S21:Supply | T21:Qty | U21:Price
+A22:Code | L22:Code
+A23:IRC0101-029-Z04 | B23:17213-KWN-9001 | D23:SEAL,DUCTCOVER | G23:2.1 | I23:1.0 | J23:2.1 | L23:IRC0101-029-Z04 | M23:17213-KWN-9001 | O23:SEAL,DUCTCOVER | R23:2.1 | T23:1.0 | U23:2.1
+A24:loss  | B24:0.03 | J24:0.063 | L24:loss  | M24:0.03 | U24:0.063
+A30:Total  | J30:2.1630000000000003 | L30:Total  | U30:2.1630000000000003
+A31:Process  Cost Breakdow  ( C ) | L31:Process  Cost Breakdow  ( C )
+A32:Process | B32:M/C | D32:Cavity | F32:Time | G32:Charge  | H32:Cost  | L32:Process | M32:M/C | O32:Cavity | Q32:Time | R32:Charge  | S32:Cost 
+F33:Sec | G33:THB/Sec | Q33:Sec | R33:THB/Sec
+A34:Injection | B34:450T | D34:2.0 | F34:350.0 | G34:0.194 | H34:33.95 | L34:Injection | M34:450T | O34:2.0 | Q34:350.0 | R34:0.194 | S34:33.95
+A35:Inspection | D35:1.0 | F35:10.0 | G35:0.01 | H35:0.1 | L35:Inspection | O35:1.0 | Q35:10.0 | R35:0.01 | S35:0.1
+A36:Checking | D36:1.0 | F36:10.0 | G36:0.015 | H36:0.15 | L36:Checking | O36:1.0 | Q36:10.0 | R36:0.015 | S36:0.15
+A37:Finishing | D37:1.0 | F37:15.0 | G37:0.015 | H37:0.22499999999999998 | L37:Finishing | O37:1.0 | Q37:15.0 | R37:0.015 | S37:0.22499999999999998
+A38:Assy | D38:1.0 | F38:10.0 | G38:0.01 | H38:0.1 | L38:Assy | O38:1.0 | Q38:10.0 | R38:0.01 | S38:0.1
+A44:Total  | H44:34.525000000000006 | L44:Total  | S44:34.525000000000006
+A45:Packing &Transport  Cost Breakdow  ( D ) | L45:Packing &Transport  Cost Breakdow  ( D )
+A46:Type | D46:Cost | G46:Qty | I46:Baht | L46:Type | O46:Cost | R46:Qty | T46:Baht
+A48:Rack | D48:100000.0 | G48:250000.0 | I48:0.4 | L48:Rack | O48:100000.0 | R48:250000.0 | T48:0.4
+A49:Foam sheet | F49:0.5 | H49:1.0 | J49:0.5 | L49:Foam sheet | Q49:0.5 | S49:1.0 | U49:0.5
+A51:Total | I51:0.9 | L51:Total | T51:0.9
+A53:Eqipment Cost Breakdow  ( E ) | L53:Eqipment Cost Breakdow  ( E )
+A54:Dies & Jig  | B54:Dies & Jig .Cost | D54:Vol . | F54:Mold | G54:Cavity | H54:Imp | I54:Loc | J54:Cost/Pcs | L54:Dies & Jig  | M54:Dies & Jig .Cost | O54:Vol . | Q54:Mold | R54:Cavity | S54:Imp | T54:Loc | U54:Cost/Pcs
+A56:Injection mold | B56:1000000.0 | D56:250000.0 | F56:1.0 | G56:4.0 | I56:x | J56:4.0 | L56:Injection mold | M56:1000000.0 | O56:250000.0 | Q56:1.0 | R56:4.0 | T56:x | U56:4.0
+A57:PM .Mold | I57:0.05 | J57:1.7262500000000003 | L57:PM .Mold | T57:0.05 | U57:1.7262500000000003
+A62:Total  | J62:5.72625 | L62:Total  | U62:5.72625
+A64:( A+B+C+D+E)  | H64:E | I64:51.85089000000001 | L64:( A+B+C+D+E)  | S64:E | T64:52.46065000000001
+A65:Profit &Admin cost  | C65:0.15 | H65:F | I65:5.178750000000001 | L65:Profit &Admin cost  | N65:0.15 | S65:F | T65:5.178750000000001
+A66:SPRAR PART.COST | C66:0.15 | K66:5.178750000000001 | L66:SPRAR PART.COST | N66:0.15 | V66:5.178750000000001
+A67:Total  | H67:E+F | I67:62.20839000000001 | L67:Total  | S67:E+F | T67:62.81815000000001
+A69:Remark : ( If you have  revised quotation  please cause fill down only. ) | L69:Remark : ( If you have  revised quotation  please cause fill down only. )
+H74:Beginning_____/_____/______ | S74:Beginning_____/_____/______
+A78:For Supplier Sign only | F78:For  Roki (Thailand ) Sign only  | L78:For Supplier Sign only | Q78:For  Roki (Thailand ) Sign only 
+A79:Approved by | B79:Checked by | D79:Issued by  | F79:Approved by | H79:Checked by | J79:Issued by  | L79:Approved by | M79:Checked by | O79:Issued by  | Q79:Approved by | S79:Checked by | U79:Issued by 
+SHEET single part -rubber
+B1:ROKI (THAILAND) Co.,Ltd.
+B2:SIAM EASTERN INDUSTRIAL PARK
+B3:60/3 MOO 3 MABYANGPORN, PLUAKDAENG, RAYONG 21140
+B4:TEL: +66-3-8891594  FAX: +66-3-8891318
+A5:Supplier Code:  | B5:40110046.0 | D5:Supplier Name :PATHUMTHANI RUBBER CO., LTD. | L5:Supplier Code:  | M5:40110046.0 | O5:Supplier Name :PATHUMTHANI RUBBER CO., LTD.
+A6:Cost  Original  | L6:Cost  Original 
+A7:Date:  15.01.2026 | C7:Part No.  | F7:17253-KWN-9000 | H7:Rev. No. | J7:Qty/Y | L7:Date:  15.03.2026 | N7:Part No.  | Q7:17253-KWN-9000 | S7:Rev. No. | U7:Qty/Y
+A8:RTP.Code: PRC0006-046-E20 | C8:Part Name | F8:TUBE,AIR CONN | H8:M206-F-26 | J8:25000.0 | L8:RTP.Code: S001571-004-01 | N8:Part Name | Q8:TUBE,AIR CONN | S8:M206-F-26 | U8:25000.0
+A9:Zone Material  Breakdown (A) | L9:Zone Material  Breakdown (A)
+A10:Material  | B10:Material  | C10:Part | D10:Scrap | F10:Total | G10:Material | H10:Imp | I10:Loc | J10:COST | L10:Material  | M10:Material  | N10:Part | O10:Scrap | Q10:Total | R10:Material | S10:Imp | T10:Loc | U10:COST
+A11:SPEC | B11:Name | C11:Weight(kg)  | D11:Weight(kg)  | F11:Weight(kg)  | G11:cost/kg | L11:SPEC | M11:Name | N11:Weight(kg)  | O11:Weight(kg)  | Q11:Weight(kg)  | R11:cost/kg
+A12:1725Z-GHA-6301 | B12:NBR/PVC HS70+/-8 | C12:0.135 | D12:0.013 | F12:0.14800000000000002 | G12:56.0 | I12:X | K12:8.288 | L12:1725Z-GHA-6301 | M12:NBR/PVC HS70+/-8 | N12:0.135 | O12:0.013 | Q12:0.14800000000000002 | R12:60.0 | T12:X | V12:8.88
+A13:loss  | B13:0.03 | K13:0.24864 | L13:loss  | M13:0.03 | V13:0.2664
+A19:Total  | I19:8.53664 | L19:Total  | T19:9.146400000000002
+A20:Component Part Breakdown (B) | L20:Component Part Breakdown (B)
+A21:Material  | B21:Part no | D21:Part name | F21:Import | G21:Local | H21:Supply | I21:Qty | J21:Price | L21:Material  | M21:Part no | O21:Part name | Q21:Import | R21:Local | S21:Supply | T21:Qty | U21:Price
+A22:Code | L22:Code
+J23:0.0 | U23:0.0
+J24:0.0 | U24:0.0
+A30:Total  | J30:0.0 | L30:Total  | U30:0.0
+A31:Process  Cost Breakdow  ( C ) | L31:Process  Cost Breakdow  ( C )
+A32:Process | B32:M/C | D32:Cavity | F32:Time | G32:Charge  | H32:Cost  | L32:Process | M32:M/C | O32:Cavity | Q32:Time | R32:Charge  | S32:Cost 
+F33:Sec | G33:THB/Sec | Q33:Sec | R33:THB/Sec
+A34:Injection | B34:450T | D34:2.0 | F34:350.0 | G34:0.194 | H34:33.95 | L34:Injection | M34:450T | O34:2.0 | Q34:350.0 | R34:0.194 | S34:33.95
+A35:Inspection | D35:1.0 | F35:10.0 | G35:0.01 | H35:0.1 | L35:Inspection | O35:1.0 | Q35:10.0 | R35:0.01 | S35:0.1
+A36:Checking | D36:1.0 | F36:10.0 | G36:0.015 | H36:0.15 | L36:Checking | O36:1.0 | Q36:10.0 | R36:0.015 | S36:0.15
+A37:Finishing | D37:1.0 | F37:15.0 | G37:0.015 | H37:0.22499999999999998 | L37:Finishing | O37:1.0 | Q37:15.0 | R37:0.015 | S37:0.22499999999999998
+A44:Total  | H44:34.425000000000004 | L44:Total  | S44:34.425000000000004
+A45:Packing &Transport  Cost Breakdow  ( D ) | L45:Packing &Transport  Cost Breakdow  ( D )
+A46:Type | D46:Cost | G46:Qty | I46:Baht | L46:Type | O46:Cost | R46:Qty | T46:Baht
+A48:Rack | D48:100000.0 | G48:250000.0 | I48:0.4 | L48:Rack | O48:100000.0 | R48:250000.0 | T48:0.4
+A49:Foam sheet | F49:0.5 | H49:1.0 | J49:0.5 | L49:Foam sheet | Q49:0.5 | S49:1.0 | U49:0.5
+A50:Tansport | J50:1.5 | L50:Tansport | U50:1.5
+A51:Total | I51:2.4 | L51:Total | T51:2.4
+A53:Eqipment Cost Breakdow  ( E ) | L53:Eqipment Cost Breakdow  ( E )
+A54:Dies & Jig  | B54:Dies & Jig .Cost | D54:Vol . | F54:Mold | G54:Cavity | H54:Imp | I54:Loc | J54:Cost/Pcs | L54:Dies & Jig  | M54:Dies & Jig .Cost | O54:Vol . | Q54:Mold | R54:Cavity | S54:Imp | T54:Loc | U54:Cost/Pcs
+A56:Injection mold | B56:1000000.0 | D56:250000.0 | F56:1.0 | G56:4.0 | I56:x | J56:4.0 | L56:Injection mold | M56:1000000.0 | O56:250000.0 | Q56:1.0 | R56:4.0 | T56:x | U56:4.0
+A57:Interest Expense | I57:0.05 | J57:0.2 | L57:Interest Expense | T57:0.05 | U57:0.2
+A62:Total  | J62:4.2 | L62:Total  | U62:4.2
+A64:( A+B+C+D+E)  | H64:E | I64:49.561640000000004 | L64:( A+B+C+D+E)  | S64:E | T64:50.171400000000006
+A65:Profit &Admin cost  | C65:0.15 | H65:F | I65:5.16375 | L65:Profit &Admin cost  | N65:0.15 | S65:F | T65:5.16375
+A66:SPRAR PART.COST | C66:0.15 | K66:5.16375 | L66:SPRAR PART.COST | N66:0.15 | V66:5.16375
+A67:Total  | H67:E+F | I67:59.889140000000005 | L67:Total  | S67:E+F | T67:60.498900000000006
+A69:Remark : ( If you have  revised quotation  please cause fill down only. ) | L69:Remark : ( If you have  revised quotation  please cause fill down only. )
+H74:Beginning_____/_____/______ | S74:Beginning_____/_____/______
+A78:For Supplier Sign only | F78:For  Roki (Thailand ) Sign only  | L78:For Supplier Sign only | Q78:For  Roki (Thailand ) Sign only 
+A79:Approved by | B79:Checked by | D79:Issued by  | F79:Approved by | H79:Checked by | J79:Issued by  | L79:Approved by | M79:Checked by | O79:Issued by  | Q79:Approved by | S79:Checked by | U79:Issued by 
+SHEET single part -steel-com
+B1:ROKI (THAILAND) Co.,Ltd.
+B2:SIAM EASTERN INDUSTRIAL PARK
+B3:60/3 MOO 3 MABYANGPORN, PLUAKDAENG, RAYONG 21140
+B4:TEL: +66-3-8891594  FAX: +66-3-8891318
+A5:Supplier Code:  | B5:40110034.0 | D5:Supplier Name :LOUIS ENGINEERING CO., LTD. | L5:Supplier Code:  | M5:40110034.0 | O5:Supplier Name :LOUIS ENGINEERING CO., LTD.
+A6:Cost  Original  | L6:Cost  Original 
+A7:Date:  15.01.2026 | C7:Part No.  | F7:17211-K16-9000-H1 | H7:Rev. No. | J7:Qty/Y | L7:Date:  15.03.2026 | N7:Part No.  | Q7:17211-K16-9000-H1 | S7:Rev. No. | U7:Qty/Y
+A8:RTP.Code:LOU0002-034-J21 | C8:Part Name | F8:GUARD ELEMENT | H8:M206-F-26 | J8:25000.0 | L8:RTP.Code: LOU0002-034-J21 | N8:Part Name | Q8:GUARD ELEMENT | S8:M206-F-26 | U8:25000.0
+A9:Zone Material  Breakdown (A) | L9:Zone Material  Breakdown (A)
+A10:Material  | B10:Material  | C10:Part | D10:Scrap | F10:Total | G10:Material | H10:Imp | I10:Loc | J10:COST | L10:Material  | M10:Material  | N10:Part | O10:Scrap | Q10:Total | R10:Material | S10:Imp | T10:Loc | U10:COST
+A11:SPEC | B11:Name | C11:Weight(kg)  | D11:Weight(kg)  | F11:Weight(kg)  | G11:cost/kg | L11:SPEC | M11:Name | N11:Weight(kg)  | O11:Weight(kg)  | Q11:Weight(kg)  | R11:cost/kg
+K12:0.0 | V12:0.0
+K13:0.0 | V13:0.0
+A19:Total  | I19:0.0 | L19:Total  | T19:0.0
+A20:Component Part Breakdown (B) | L20:Component Part Breakdown (B)
+A21:Material  | B21:Part no | D21:Part name | F21:Import | G21:Local | H21:Supply | I21:Qty | J21:Price | L21:Material  | M21:Part no | O21:Part name | Q21:Import | R21:Local | S21:Supply | T21:Qty | U21:Price
+A22:Code | L22:Code
+B23:17211-KZL-93-21 | D23:PLATE | I23:1.0 | J23:18.745499999999996 | M23:17211-KZL-93-21 | O23:PLATE | U23:14.545499999999997
+B24:17211-K16-9022 | D24:MESH | I24:1.0 | J24:17.032000000000004 | M24:17211-K16-9022 | O24:MESH | U24:13.031999999999998
+A30:Total  | J30:35.7775 | L30:Total  | U30:27.577499999999993
+A31:Process  Cost Breakdow  ( C ) | L31:Process  Cost Breakdow  ( C )
+A32:Process | B32:M/C | D32:Cavity | F32:Time | G32:Charge  | H32:Cost  | L32:Process | M32:M/C | O32:Cavity | Q32:Time | R32:Charge  | S32:Cost 
+F33:Sec | G33:THB/Sec | Q33:Sec | R33:THB/Sec
+A34:ASSY MASH | D34:1.0 | F34:350.0 | G34:0.194 | H34:67.9 | L34:ASSY MASH | O34:1.0 | Q34:350.0 | R34:0.194 | S34:67.9
+A35:STAMP 1 | B35:60  TONS | D35:1.0 | F35:10.0 | G35:0.01 | H35:0.1 | L35:STAMP 1 | M35:60  TONS | O35:1.0 | Q35:10.0 | R35:0.01 | S35:0.1
+A36:STAMP 2 | B36:60  TONS | D36:1.0 | F36:10.0 | G36:0.015 | H36:0.15 | L36:STAMP 2 | M36:60  TONS | O36:1.0 | Q36:10.0 | R36:0.015 | S36:0.15
+A37:PIERCE | B37:60  TONS | D37:1.0 | F37:15.0 | G37:0.015 | H37:0.22499999999999998 | L37:PIERCE | M37:60  TONS | O37:1.0 | Q37:15.0 | R37:0.015 | S37:0.22499999999999998
+A38:INSPECTION  100 % | L38:INSPECTION  100 %
+A44:Total  | H44:68.375 | L44:Total  | S44:68.375
+A45:Packing &Transport  Cost Breakdow  ( D ) | L45:Packing &Transport  Cost Breakdow  ( D )
+A46:Type | D46:Cost | G46:Qty | I46:Baht | L46:Type | O46:Cost | R46:Qty | T46:Baht
+A48:Rack | D48:100000.0 | G48:250000.0 | I48:0.4 | L48:Rack | O48:100000.0 | R48:250000.0 | T48:0.4
+A49:Foam sheet | F49:0.5 | H49:1.0 | J49:0.5 | L49:Foam sheet | Q49:0.5 | S49:1.0 | U49:0.5
+A50:Tansport | J50:1.5 | L50:Tansport | U50:1.5
+A51:Total | I51:2.4 | L51:Total | T51:2.4
+A53:Eqipment Cost Breakdow  ( E ) | L53:Eqipment Cost Breakdow  ( E )
+A54:Dies & Jig  | B54:Dies & Jig .Cost | D54:Vol . | F54:Mold | G54:Cavity | H54:Imp | I54:Loc | J54:Cost/Pcs | L54:Dies & Jig  | M54:Dies & Jig .Cost | O54:Vol . | Q54:Mold | R54:Cavity | S54:Imp | T54:Loc | U54:Cost/Pcs
+A56:Injection mold | B56:1000000.0 | D56:250000.0 | F56:1.0 | G56:4.0 | I56:x | J56:4.0 | L56:Injection mold | M56:1000000.0 | O56:250000.0 | Q56:1.0 | R56:4.0 | T56:x | U56:4.0
+A57:Interest Expense | I57:0.05 | J57:0.2 | L57:Interest Expense | T57:0.05 | U57:0.2
+A62:Total  | J62:4.2 | L62:Total  | U62:4.2
+A64:( A+B+C+D+E)  | H64:E | I64:110.75250000000001 | L64:( A+B+C+D+E)  | S64:E | T64:102.5525
+A65:Profit &Admin cost  | C65:0.15 | H65:F | I65:10.25625 | L65:Profit &Admin cost  | N65:0.15 | S65:F | T65:10.25625
+A66:SPRAR PART.COST | C66:0.15 | K66:10.25625 | L66:SPRAR PART.COST | N66:0.15 | V66:10.25625
+A67:Total  | H67:E+F | I67:131.26500000000001 | L67:Total  | S67:E+F | T67:123.06499999999998
+A69:Remark : ( If you have  revised quotation  please cause fill down only. ) | L69:Remark : ( If you have  revised quotation  please cause fill down only. )
+L71:Cut off tooling
+H74:Beginning_____/_____/______ | S74:Beginning_____/_____/______
+A78:For Supplier Sign only | F78:For  Roki (Thailand ) Sign only  | L78:For Supplier Sign only | Q78:For  Roki (Thailand ) Sign only 
+A79:Approved by | B79:Checked by | D79:Issued by  | F79:Approved by | H79:Checked by | J79:Issued by  | L79:Approved by | M79:Checked by | O79:Issued by  | Q79:Approved by | S79:Checked by | U79:Issued by 
+SHEET single part -steel-sub part 1
+B1:ROKI (THAILAND) Co.,Ltd.
+B2:SIAM EASTERN INDUSTRIAL PARK
+B3:60/3 MOO 3 MABYANGPORN, PLUAKDAENG, RAYONG 21140
+B4:TEL: +66-3-8891594  FAX: +66-3-8891318
+A5:Supplier Code:  | B5:40110034.0 | D5:Supplier Name :LOUIS ENGINEERING CO., LTD. | L5:Supplier Code:  | M5:40110034.0 | O5:Supplier Name :LOUIS ENGINEERING CO., LTD.
+A6:Cost  Original  | L6:Cost  Original 
+A7:Date:  15.01.2026 | C7:Part No.  | F7:17211-KZL-9300-21 | H7:Rev. No. | J7:Qty/2Y | L7:Date:  15.03.2026 | N7:Part No.  | Q7:17211-KZL-9300-21 | S7:Rev. No. | U7:Qty/2Y
+A8:RTP.Code: | C8:Part Name | F8:PLATE | H8:M206-F-26 | J8:250000.0 | L8:RTP.Code:  | N8:Part Name | Q8:PLATE | S8:M206-F-26 | U8:250000.0
+A9:Zone Material  Breakdown (A) | L9:Zone Material  Breakdown (A)
+A10:Material  | B10:Material  | C10:Part | D10:Scrap | F10:Total | G10:Material | H10:Imp | I10:Loc | J10:COST | L10:Material  | M10:Material  | N10:Part | O10:Scrap | Q10:Total | R10:Material | S10:Imp | T10:Loc | U10:COST
+A11:SPEC | B11:Name | C11:Weight(kg)  | D11:Weight(kg)  | F11:Weight(kg)  | G11:cost/kg | L11:SPEC | M11:Name | N11:Weight(kg)  | O11:Weight(kg)  | Q11:Weight(kg)  | R11:cost/kg
+B12:SGCC 0.4 x 120 x 180 | C12:0.068 | F12:0.068 | G12:46.0 | I12:x | K12:3.128 | M12:SGCC 0.4 x 120 x 180 | N12:0.068 | Q12:0.068 | R12:46.0 | T12:x | V12:3.128
+K13:0.0 | V13:0.0
+A19:Total  | I19:3.128 | L19:Total  | T19:3.128
+A20:Component Part Breakdown (B) | L20:Component Part Breakdown (B)
+A21:Material  | B21:Part no | D21:Part name | F21:Import | G21:Local | H21:Supply | I21:Qty | J21:Price | L21:Material  | M21:Part no | O21:Part name | Q21:Import | R21:Local | S21:Supply | T21:Qty | U21:Price
+A22:Code | L22:Code
+J23:0.0 | U23:0.0
+J24:0.0 | U24:0.0
+A30:Total  | J30:0.0 | L30:Total  | U30:0.0
+A31:Process  Cost Breakdow  ( C ) | L31:Process  Cost Breakdow  ( C )
+A32:Process | B32:M/C | D32:Cavity | F32:Time | G32:Charge  | H32:Cost  | L32:Process | M32:M/C | O32:Cavity | Q32:Time | R32:Charge  | S32:Cost 
+F33:Sec | G33:THB/Sec | Q33:Sec | R33:THB/Sec
+A34:PROGRESSIVE | B34:110 TONS | D34:1.0 | F34:350.0 | G34:0.018 | H34:6.3 | L34:PROGRESSIVE | M34:110 TONS | O34:1.0 | Q34:350.0 | R34:0.018 | S34:6.3
+A35:FORM | B35:60 TONS | D35:1.0 | F35:10.0 | G35:0.01 | H35:0.1 | L35:FORM | M35:60 TONS | O35:1.0 | Q35:10.0 | R35:0.01 | S35:0.1
+A36:INSPECTION   | D36:1.0 | F36:10.0 | G36:0.015 | H36:0.15 | L36:INSPECTION   | O36:1.0 | Q36:10.0 | R36:0.015 | S36:0.15
+A37:Finishing | D37:1.0 | F37:15.0 | G37:0.015 | H37:0.22499999999999998 | L37:Finishing | O37:1.0 | Q37:15.0 | R37:0.015 | S37:0.22499999999999998
+A44:Total  | H44:6.7749999999999995 | L44:Total  | S44:6.7749999999999995
+A45:Packing &Transport  Cost Breakdow  ( D ) | L45:Packing &Transport  Cost Breakdow  ( D )
+A46:Type | D46:Cost | G46:Qty | I46:Baht | L46:Type | O46:Cost | R46:Qty | T46:Baht
+A48:BOX | D48:100000.0 | G48:250000.0 | I48:0.4 | L48:BOX | O48:100000.0 | R48:250000.0 | T48:0.4
+A49:Foam sheet | F49:0.5 | H49:1.0 | J49:0.5 | L49:Foam sheet | Q49:0.5 | S49:1.0 | U49:0.5
+A50:Tansport | J50:1.5 | L50:Tansport | U50:1.5
+A51:Total | I51:2.4 | L51:Total | T51:2.4
+A53:Eqipment Cost Breakdow  ( E ) | L53:Eqipment Cost Breakdow  ( E )
+A54:Dies & Jig  | B54:Dies & Jig .Cost | D54:Vol . | F54:Mold | G54:Cavity | H54:Imp | I54:Loc | J54:Cost/Pcs | L54:Dies & Jig  | M54:Dies & Jig .Cost | O54:Vol . | Q54:Mold | R54:Cavity | S54:Imp | T54:Loc | U54:Cost/Pcs
+A56:DIE PROGRESSIVE | B56:1000000.0 | D56:250000.0 | F56:1.0 | G56:1.0 | I56:x | J56:4.0 | L56:DIE PROGRESSIVE | Q56:1.0 | R56:1.0 | T56:x | U56:0.0
+A57:DIE FORM | B57:25000.0 | D57:250000.0 | F57:1.0 | G57:1.0 | I57:x | J57:0.1 | L57:DIE FORM | Q57:1.0 | R57:1.0 | T57:x | U57:0.0
+A58:JIG CHECK | B58:25000.0 | D58:250000.0 | F58:1.0 | G58:1.0 | I58:x | J58:0.1 | L58:JIG CHECK | Q58:1.0 | R58:1.0 | T58:x | U58:0.0
+A59:Interest Expense | I59:0.05 | J59:0.20999999999999996 | L59:PM.Mold | T59:0.05 | U59:0.20999999999999996
+A62:Total  | J62:4.409999999999999 | L62:Total  | U62:0.20999999999999996
+A64:( A+B+C+D+E)  | H64:E | I64:16.712999999999997 | L64:( A+B+C+D+E)  | S64:E | T64:12.512999999999998
+A65:Profit &Admin cost  | C65:0.15 | H65:F | I65:1.0162499999999999 | L65:Profit &Admin cost  | N65:0.15 | S65:F | T65:1.0162499999999999
+A66:SPRAR PART.COST | C66:0.15 | K66:1.0162499999999999 | L66:SPRAR PART.COST | N66:0.15 | V66:1.0162499999999999
+A67:Total  | H67:E+F | K67:18.745499999999996 | L67:Total  | S67:E+F | V67:14.545499999999997
+A69:Remark : ( If you have  revised quotation  please cause fill down only. ) | L69:Remark : ( If you have  revised quotation  please cause fill down only. )
+H74:Beginning_____/_____/______ | S74:Beginning_____/_____/______
+A78:For Supplier Sign only | F78:For  Roki (Thailand ) Sign only  | L78:For Supplier Sign only | Q78:For  Roki (Thailand ) Sign only 
+A79:Approved by | B79:Checked by | D79:Issued by  | F79:Approved by | H79:Checked by | J79:Issued by  | L79:Approved by | M79:Checked by | O79:Issued by  | Q79:Approved by | S79:Checked by | U79:Issued by 
+SHEET single part -steel-sub part 2
+B1:ROKI (THAILAND) Co.,Ltd.
+B2:SIAM EASTERN INDUSTRIAL PARK
+B3:60/3 MOO 3 MABYANGPORN, PLUAKDAENG, RAYONG 21140
+B4:TEL: +66-3-8891594  FAX: +66-3-8891318
+A5:Supplier Code:  | B5:40110034.0 | D5:Supplier Name :LOUIS ENGINEERING CO., LTD. | L5:Supplier Code:  | M5:40110034.0 | O5:Supplier Name :LOUIS ENGINEERING CO., LTD.
+A6:Cost  Original  | L6:Cost  Original 
+A7:Date:  15.01.2026 | C7:Part No.  | F7:17211-KZL-9300-22 | H7:Rev. No. | J7:Qty/2Y | L7:Date:  15.03.2026 | N7:Part No.  | Q7:17211-KZL-9300-22 | S7:Rev. No. | U7:Qty/2Y
+A8:RTP.Code: | C8:Part Name | F8:PLATE | H8:M206-F-26 | J8:250000.0 | L8:RTP.Code:  | N8:Part Name | Q8:Mesh | S8:M206-F-26 | U8:250000.0
+A9:Zone Material  Breakdown (A) | L9:Zone Material  Breakdown (A)
+A10:Material  | B10:Material  | C10:Part | D10:Scrap | F10:Total | G10:Material | H10:Imp | I10:Loc | J10:COST | L10:Material  | M10:Material  | N10:Part | O10:Scrap | Q10:Total | R10:Material | S10:Imp | T10:Loc | U10:COST
+A11:SPEC | B11:Name | C11:Weight(kg)  | D11:Weight(kg)  | F11:Weight(kg)  | G11:cost/kg | L11:SPEC | M11:Name | N11:Weight(kg)  | O11:Weight(kg)  | Q11:Weight(kg)  | R11:cost/kg
+B12:16 MESH  WIRE DIA 0.35 | C12:0.0066 | F12:0.0066 | G12:320.0 | H12:x | K12:2.112 | M12:16 MESH  WIRE DIA 0.35 | N12:0.0066 | Q12:0.0066 | R12:320.0 | V12:2.112
+B13:80 x 152 | M13:80 x 152
+A19:Total  | I19:2.112 | L19:Total  | T19:2.112
+A20:Component Part Breakdown (B) | L20:Component Part Breakdown (B)
+A21:Material  | B21:Part no | D21:Part name | F21:Import | G21:Local | H21:Supply | I21:Qty | J21:Price | L21:Material  | M21:Part no | O21:Part name | Q21:Import | R21:Local | S21:Supply | T21:Qty | U21:Price
+A22:Code | L22:Code
+J23:0.0 | U23:0.0
+J24:0.0 | U24:0.0
+A30:Total  | J30:0.0 | L30:Total  | U30:0.0
+A31:Process  Cost Breakdow  ( C ) | L31:Process  Cost Breakdow  ( C )
+A32:Process | B32:M/C | D32:Cavity | F32:Time | G32:Charge  | H32:Cost  | L32:Process | M32:M/C | O32:Cavity | Q32:Time | R32:Charge  | S32:Cost 
+F33:Sec | G33:THB/Sec | Q33:Sec | R33:THB/Sec
+A34:BLANK | D34:1.0 | F34:350.0 | G34:0.018 | H34:6.3 | L34:BLANK | M34:110 TONS | O34:1.0 | Q34:350.0 | R34:0.018 | S34:6.3
+A35:INSPECTION   | D35:1.0 | F35:10.0 | G35:0.01 | H35:0.1 | L35:INSPECTION   | M35:60 TONS | O35:1.0 | Q35:10.0 | R35:0.01 | S35:0.1
+A44:Total  | H44:6.3999999999999995 | L44:Total  | S44:6.3999999999999995
+A45:Packing &Transport  Cost Breakdow  ( D ) | L45:Packing &Transport  Cost Breakdow  ( D )
+A46:Type | D46:Cost | G46:Qty | I46:Baht | L46:Type | O46:Cost | R46:Qty | T46:Baht
+A48:BOX | D48:100000.0 | G48:250000.0 | I48:0.4 | L48:BOX | O48:100000.0 | R48:250000.0 | T48:0.4
+A49:Foam sheet | F49:0.5 | H49:1.0 | J49:0.5 | L49:Foam sheet | Q49:0.5 | S49:1.0 | U49:0.5
+A50:Tansport | J50:1.5 | L50:Tansport | U50:1.5
+A51:Total | I51:2.4 | L51:Total | T51:2.4
+A53:Eqipment Cost Breakdow  ( E ) | L53:Eqipment Cost Breakdow  ( E )
+A54:Dies & Jig  | B54:Dies & Jig .Cost | D54:Vol . | F54:Mold | G54:Cavity | H54:Imp | I54:Loc | J54:Cost/Pcs | L54:Dies & Jig  | M54:Dies & Jig .Cost | O54:Vol . | Q54:Mold | R54:Cavity | S54:Imp | T54:Loc | U54:Cost/Pcs
+A56:DIE BLANK | B56:1000000.0 | D56:250000.0 | F56:1.0 | G56:1.0 | I56:x | J56:4.0 | L56:DIE BLANK | Q56:1.0 | R56:1.0 | T56:x | U56:0.0
+A57:Interest Expense | I57:0.05 | J57:0.2 | L57:PM.Mold | T57:0.05 | U57:0.2
+A62:Total  | J62:4.2 | L62:Total  | U62:0.2
+A64:( A+B+C+D+E)  | H64:E | I64:15.112000000000002 | L64:( A+B+C+D+E)  | S64:E | T64:11.112
+A65:Profit &Admin cost  | C65:0.15 | H65:F | I65:0.9599999999999999 | L65:Profit &Admin cost  | N65:0.15 | S65:F | T65:0.9599999999999999
+A66:SPRAR PART.COST | C66:0.15 | K66:0.9599999999999999 | L66:SPRAR PART.COST | N66:0.15 | V66:0.9599999999999999
+A67:Total  | H67:E+F | K67:17.032000000000004 | L67:Total  | S67:E+F | V67:13.031999999999998
+A69:Remark : ( If you have  revised quotation  please cause fill down only. ) | L69:Remark : ( If you have  revised quotation  please cause fill down only. )
+H74:Beginning_____/_____/______ | S74:Beginning_____/_____/______
+A78:For Supplier Sign only | F78:For  Roki (Thailand ) Sign only  | L78:For Supplier Sign only | Q78:For  Roki (Thailand ) Sign only 
+A79:Approved by | B79:Checked by | D79:Issued by  | F79:Approved by | H79:Checked by | J79:Issued by  | L79:Approved by | M79:Checked by | O79:Issued by  | Q79:Approved by | S79:Checked by | U79:Issued by 

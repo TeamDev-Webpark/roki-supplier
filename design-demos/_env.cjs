@@ -12,6 +12,7 @@ function startServer(){
   if(process.env.BASE_URL)return Promise.resolve({base:process.env.BASE_URL.replace(/\/?$/,'/'),close:async()=>{}});
   const server=http.createServer((req,res)=>{
     const rel=decodeURIComponent(new URL(req.url,'http://x').pathname).replace(/^\/+/,'')||'index.html',file=path.resolve(ROOT,rel);
+    if(rel==='favicon.ico'){res.writeHead(204).end();return}   /* browsers ask for it on their own; the pages do not link one */
     if(!file.startsWith(ROOT+path.sep)&&file!==ROOT){res.writeHead(403).end();return}
     fs.readFile(file,(err,data)=>{if(err){res.writeHead(404).end('Not found');return}res.writeHead(200,{'Content-Type':TYPES[path.extname(file)]||'application/octet-stream','Cache-Control':'no-store'});res.end(data)});
   });

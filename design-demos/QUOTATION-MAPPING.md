@@ -72,3 +72,29 @@ Separate `roki.html` and `supplier.html` now provide the interactive demo. `inde
 Includes named individual demo accounts, supplier Issue / Approve, ROKI Issue / Check / Approve, role-specific actions, quotation calculations and attachments, return/reject reasons, revision snapshots, approved-only CSV export, manual price update schedule/notification preview/log and supplier request inbox. Status highlights include amber, blue, green, purple, red and gray with text labels.
 
 This demo uses browser storage and simulated account/signature/notification behavior. It does not implement production authentication, authorization, database, email, real digital signatures or SAP integration. See README.md for run instructions and verification.
+
+## Customer formula sets — verified against the customer's own examples
+
+Formula sets **Injection**, **Rubber**, **Steel** (Single Part) and **Assembly · QT-ASSY** are built in and checked by
+`verify-customer-sheets.cjs` against every block of `docs/sample -QT.xls` (original + revised, five sheets: values calculated
+by Excel itself) and against `docs/QT-ASSY.pdf` Rev.10 / Rev.11, plus the paper forms already in the demo data
+(GUARD ELEMENT 13.83 → 11.15, HOLDER 3.07 → 3.23). `verify-bom-links.cjs` checks the sub-part links.
+
+| | Injection | Rubber | Steel (parent and sub-parts) | Assembly · QT-ASSY |
+|---|---|---|---|---|
+| A Material | (part + scrap wt) × rate × (1 + loss%) per line, loss 3% | same, loss 3% | same, loss 0 | input wt × rate; “Loss 3%” counts only lines marked Included (the 15% BLACK CRUSH line is excluded) |
+| B Components | qty × price × (1 + loss%), loss 3% | – | qty × price; **price = total of the sub-part quotation** (linked) | A: unit cost × qty, Management 0.5% |
+| C Process | charge × time ÷ cavity | same | same | same |
+| D Packing | cost × used per piece ÷ shared qty; rack = cost ÷ lifetime qty, foam = unit × qty, transport = amount | same | same | same, plus **maintenance % per line** (“MN cost rack 5%”) |
+| E Equipment / D Investment | tool cost ÷ volume; **PM 5% of the process cost (C)** | tool cost ÷ volume; **interest 5% of each tool’s own cost per piece** | same as Rubber; a **repaid** tool costs 0 but keeps its interest (“cut off tooling”) | Common + New investment ÷ volume; **repayment**; maintenance % on the tool or on a stated base (PM mold 5% × 9.03) |
+| Profit & admin / spare | 15% of C each | 15% of C each | 15% of C each | 15% of C, no spare |
+| Rounding | none between steps; unit price = total rounded to 2 decimals | same | same | every line, section total and the price rounded to 2 decimals; profit truncated |
+
+Sub-part link: the parent row takes the **unrounded** total of the sub-part’s approved quotation, exactly as the Excel link
+does (`quotation.totalRaw`), so parent and sub-part never disagree by a rounding step.
+
+Still to confirm with ROKI (the demo needs a rule, the documents do not give one):
+- How a **Common** (shared) tool’s cost is allocated across the parts that share it. Today the amount entered is divided by the volume entered.
+- Whether the revised Excel blocks that compute interest from the *original* block’s tool cost (“Cut off tooling”) are intended; the demo models it as “tool repaid”.
+- Which sub-part quotation a parent should use when the sub-part has several approved quotations or suppliers (today: the latest approved one of the same supplier).
+- The “Set-up loss” line of QT-ASSY is entered as an ordinary component line; its base (“part vibration”) is not defined in the document.

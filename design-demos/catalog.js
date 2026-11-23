@@ -77,12 +77,12 @@ function partDialog(id){
   dialog(it?'Edit part':'Add part',
   `<div class="form-grid dialog-grid"><div class="field"><label for="pf-code">Part code *</label><input id="pf-code" maxlength="40" value="${esc(it?.code||'')}" ${it?'readonly':''} placeholder="e.g. 17230-KWN-9000"></div>
   <div class="field"><label for="pf-name">Part name *</label><input id="pf-name" maxlength="100" value="${esc(it?.name||'')}"></div>
-  <div class="field"><label for="pf-format">Format *</label><select id="pf-format" ${it&&codeHasQuotes(it.code)?'disabled':''}>${FORMAT_NAMES.map(f=>`<option value="${f}" ${it?.format===f?'selected':''}>${f}</option>`).join('')}</select></div>
+  <div class="field"><label for="pf-format">${wfText("Quotation form category *","ประเภทฟอร์มใบเสนอราคา *")}</label><select id="pf-format" ${it&&codeHasQuotes(it.code)?'disabled':''}>${it?'':`<option value="">${wfText("Select a form category","เลือกประเภทฟอร์ม")}</option>`}${FORMAT_NAMES.map(f=>`<option value="${f}" ${it?.format===f?'selected':''}>${esc(quotationFormLabel(f))}</option>`).join('')}</select><small>${wfText("Set the main form here. Its formula and version are chosen when creating a request. Existing quoted parts keep their category.","กำหนดประเภทหลักที่นี่ แล้วเลือกสูตรและเวอร์ชันตอนสร้างคำขอ รายการที่มีใบเสนอราคาแล้วจะคงประเภทเดิม")}</small></div>
   <div class="field"><label for="pf-supplier">Supplier *</label><select id="pf-supplier" ${it?'disabled':''}>${it?'':'<option value="">Select a supplier</option>'}${supplierOpts}</select></div>
   <div class="field"><label for="pf-family">${wfText("Part family / common reference","รหัสกลุ่มชิ้นส่วนกลาง")}</label><input id="pf-family" maxlength="80" value="${esc(it?familyKey(it):'')}"><small>${wfText("Use the same family for equivalent parts with different supplier item codes. Leave empty to use the part code.","ใช้รหัสกลุ่มเดียวกันสำหรับชิ้นส่วนเทียบเท่าที่คนละ Item Code เว้นว่างเพื่อใช้รหัสชิ้นส่วน")}</small></div><div class="field"><label for="pf-rtp">RTP code</label><input id="pf-rtp" maxlength="40" value="${esc(it?.rtp||'')}"></div>
   <div class="field"><label for="pf-drawing">Rev. no. / drawing</label><input id="pf-drawing" maxlength="80" value="${esc(it?.drawing||'')}"></div>
   <div class="field"><label for="pf-qty">Quantity per year · pcs</label><input id="pf-qty" type="number" min="0" step="1" value="${esc(it?.qty??'')}"></div></div>
-  <div class="field"><label for="pf-children">Components (optional)</label><textarea id="pf-children" rows="3" placeholder="One per line: part code, quantity">${esc(it?childrenText(it):'')}</textarea><small>For assemblies or parts made from sub-parts. Example: 17211-KZL-9300-21, 1</small></div>
+  <div class="field"><label for="pf-children">Components (optional)</label><textarea id="pf-children" rows="3" placeholder="One per line: part code, quantity">${esc(it?childrenText(it):'')}</textarea><small>For assemblies or parts made from sub-parts. Example: 17211-KZL-9300-21, 1</small><label class="check" style="margin-top:10px"><input type="checkbox" id="pf-create-children"> ${wfText('Also add components missing from the part list for this supplier','เพิ่มชิ้นส่วนย่อยที่ยังไม่มีในรายการให้ Supplier รายนี้ด้วย')}</label></div>
   <div class="schedule-box"><label class="check"><input type="checkbox" id="pf-sched" ${it?(it.next?'checked':''):'checked'}> Include in the price update schedule</label>
   <div class="form-grid dialog-grid"><div class="field"><label for="pf-cadence">Review interval</label><select id="pf-cadence"><option value="1" ${cad===1?'selected':''}>Every month</option><option value="3" ${cad===3?'selected':''}>Every 3 months</option></select></div>
   <div class="field"><label for="pf-next">Next review date</label><input id="pf-next" type="date" value="${esc(it?.next||'')}"></div></div><small>Leave the date empty to calculate it from the last approved price.</small></div>
@@ -94,6 +94,7 @@ function savePart(){
   const v=id=>document.getElementById(id).value.trim(),edit=partEdit?db.items.find(i=>i.id===partEdit):null;
   const code=edit?edit.code:v('pf-code'),name=v('pf-name'),supplier=edit?edit.supplier:v('pf-supplier');
   const format=document.getElementById('pf-format').disabled?edit.format:v('pf-format');
+  if(!FORMAT_NAMES.includes(format))return toast(wfText('Select a quotation form category.','เลือกประเภทฟอร์มใบเสนอราคา'));
   if(!code||!name)return toast('Enter a part code and a part name.');
   if(!supplier||!suppliers.some(s=>s.id===supplier))return toast('Select a supplier for this part.');
   if(!edit&&db.items.some(i=>i.code===code&&i.supplier===supplier))return toast('This part is already linked to this supplier.');
@@ -108,6 +109,11 @@ function savePart(){
   pair.next=wantsSchedule?(nextInput||addMonths(pair.last||TODAY,cadence)):null;
   for(const i of [pair,...sameCode]){i.family=v('pf-family')||code;i.name=name;i.format=format;i.drawing=v('pf-drawing');i.children=structuredClone(kids.list)}
   if(!edit)db.items.push(pair);
+  if(document.getElementById('pf-create-children')?.checked)for(const ch of kids.list){
+    if(db.items.some(x=>x.code===ch.code&&x.supplier===supplier))continue;
+    const known=db.items.find(x=>x.code===ch.code);   /* one row per component, so the sub-part can be priced and linked into this part */
+    db.items.push({id:nextItemId(),code:ch.code,name:known?known.name:ch.code,supplier,format:known?known.format:'Single Part',family:known?familyKey(known):ch.code,rtp:'',drawing:known?.drawing||'',qty:0,cadence:3,next:null,price:null,last:null,children:[]});
+  }
   audit((edit?'Updated part · ':'Added part · ')+code+' / '+supplierName(supplier));
   if(!persistOrWarn())return;
   closeDialog();render();toast(edit?'Part saved.':'Part added.');

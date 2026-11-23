@@ -1,0 +1,752 @@
+{
+  "formulaCoverage": {
+    "formats": {
+      "Single Part": {
+        "qtyLabel": "Quantity / year",
+        "sections": [
+          {
+            "key": "material",
+            "letter": "A",
+            "label": "Material",
+            "expr": "(weight+scrap)*rate",
+            "fields": [
+              [
+                "code",
+                "Material code / spec",
+                "text",
+                null,
+                {}
+              ],
+              [
+                "name",
+                "Material name",
+                "text",
+                null,
+                {
+                  "req": true
+                }
+              ],
+              [
+                "origin",
+                "Imp / Loc",
+                "origin",
+                [
+                  "Local",
+                  "Import"
+                ],
+                {}
+              ],
+              [
+                "weight",
+                "Part wt · kg",
+                "number",
+                null,
+                {}
+              ],
+              [
+                "scrap",
+                "Scrap wt · kg",
+                "number",
+                null,
+                {}
+              ],
+              [
+                "rate",
+                "Cost · THB/kg",
+                "number",
+                null,
+                {}
+              ]
+            ],
+            "adj": [
+              {
+                "key": "materialLoss",
+                "label": "Material loss",
+                "percent": 3,
+                "of": "self",
+                "lock": false
+              }
+            ]
+          },
+          {
+            "key": "components",
+            "letter": "B",
+            "label": "Component parts",
+            "expr": "qty*rate",
+            "fields": [
+              [
+                "partNo",
+                "Part no.",
+                "text",
+                null,
+                {
+                  "req": true
+                }
+              ],
+              [
+                "name",
+                "Part name",
+                "text",
+                null,
+                {
+                  "req": true
+                }
+              ],
+              [
+                "origin",
+                "Import / Local / Supply",
+                "origin",
+                [
+                  "Local",
+                  "Import",
+                  "Supply"
+                ],
+                {}
+              ],
+              [
+                "qty",
+                "Qty",
+                "number",
+                null,
+                {
+                  "def": 1
+                }
+              ],
+              [
+                "rate",
+                "Price · THB",
+                "number",
+                null,
+                {}
+              ]
+            ],
+            "adj": [
+              {
+                "key": "componentLoss",
+                "label": "Component loss",
+                "percent": 0,
+                "of": "self",
+                "lock": false
+              }
+            ]
+          },
+          {
+            "key": "process",
+            "letter": "C",
+            "label": "Process",
+            "expr": "rate*time/cavity",
+            "fields": [
+              [
+                "name",
+                "Process",
+                "text",
+                null,
+                {
+                  "req": true
+                }
+              ],
+              [
+                "machine",
+                "M/C",
+                "text",
+                null,
+                {}
+              ],
+              [
+                "cavity",
+                "Cavity",
+                "number",
+                null,
+                {
+                  "positive": true,
+                  "def": 1
+                }
+              ],
+              [
+                "time",
+                "Time · sec",
+                "number",
+                null,
+                {}
+              ],
+              [
+                "rate",
+                "Charge · THB/sec",
+                "number",
+                null,
+                {}
+              ]
+            ],
+            "adj": []
+          },
+          {
+            "key": "packing",
+            "letter": "D",
+            "label": "Packing & transport",
+            "expr": "amount/qty",
+            "fields": [
+              [
+                "name",
+                "Type",
+                "text",
+                null,
+                {
+                  "req": true
+                }
+              ],
+              [
+                "amount",
+                "Cost · THB",
+                "number",
+                null,
+                {}
+              ],
+              [
+                "qty",
+                "Qty · pcs",
+                "number",
+                null,
+                {
+                  "positive": true,
+                  "def": 1
+                }
+              ]
+            ],
+            "adj": []
+          },
+          {
+            "key": "equipment",
+            "letter": "E",
+            "label": "Equipment",
+            "expr": "amount/volume",
+            "fields": [
+              [
+                "name",
+                "Dies & jig",
+                "text",
+                null,
+                {
+                  "req": true
+                }
+              ],
+              [
+                "origin",
+                "Imp / Loc",
+                "origin",
+                [
+                  "Local",
+                  "Import"
+                ],
+                {}
+              ],
+              [
+                "cavity",
+                "Cavity",
+                "number",
+                null,
+                {
+                  "positive": true,
+                  "def": 1
+                }
+              ],
+              [
+                "amount",
+                "Dies & jig cost · THB",
+                "number",
+                null,
+                {}
+              ],
+              [
+                "volume",
+                "Volume · pcs",
+                "number",
+                null,
+                {
+                  "positive": true,
+                  "def": 1
+                }
+              ]
+            ],
+            "adj": [
+              {
+                "key": "pm",
+                "label": "PM / interest",
+                "percent": 5,
+                "of": "process",
+                "lock": false,
+                "ofKey": "pmBasis",
+                "choices": [
+                  {
+                    "value": "process",
+                    "label": "Process cost (C)",
+                    "of": "process"
+                  },
+                  {
+                    "value": "equipment",
+                    "label": "Dies & jig total",
+                    "of": "self"
+                  }
+                ]
+              }
+            ]
+          }
+        ],
+        "profit": {
+          "percent": 15,
+          "base": "process",
+          "bases": [
+            "process",
+            "subtotal"
+          ],
+          "lock": false
+        },
+        "spare": {
+          "percent": 0,
+          "base": "process",
+          "lock": false
+        },
+        "rounding": {
+          "decimals": 2,
+          "section": "round",
+          "profit": "truncate",
+          "spare": "truncate",
+          "total": "round"
+        },
+        "total": "subtotal+profit+spare"
+      },
+      "Assembly": {
+        "qtyLabel": "Monthly quantity",
+        "sections": [
+          {
+            "key": "components",
+            "letter": "A",
+            "label": "Component parts",
+            "expr": "rate*qty",
+            "fields": [
+              [
+                "partNo",
+                "Part no.",
+                "text",
+                null,
+                {
+                  "req": true
+                }
+              ],
+              [
+                "name",
+                "Part name",
+                "text",
+                null,
+                {
+                  "req": true
+                }
+              ],
+              [
+                "origin",
+                "Imp / Loc",
+                "origin",
+                [
+                  "Local",
+                  "Import"
+                ],
+                {}
+              ],
+              [
+                "rate",
+                "Unit cost · THB",
+                "number",
+                null,
+                {}
+              ],
+              [
+                "qty",
+                "Qty",
+                "number",
+                null,
+                {
+                  "def": 1
+                }
+              ]
+            ],
+            "adj": [
+              {
+                "key": "management",
+                "label": "Management",
+                "percent": 0.5,
+                "of": "self",
+                "lock": false
+              }
+            ]
+          },
+          {
+            "key": "material",
+            "letter": "B",
+            "label": "Material",
+            "expr": "(weight+runner)*rate",
+            "fields": [
+              [
+                "name",
+                "Material",
+                "text",
+                null,
+                {
+                  "req": true
+                }
+              ],
+              [
+                "origin",
+                "Imp / Loc",
+                "origin",
+                [
+                  "Local",
+                  "Import"
+                ],
+                {}
+              ],
+              [
+                "weight",
+                "Part wt · kg",
+                "number",
+                null,
+                {}
+              ],
+              [
+                "runner",
+                "Runner wt · kg",
+                "number",
+                null,
+                {}
+              ],
+              [
+                "rate",
+                "THB / kg",
+                "number",
+                null,
+                {}
+              ]
+            ],
+            "adj": [
+              {
+                "key": "loss",
+                "label": "Material loss",
+                "percent": 3,
+                "of": "self",
+                "lock": false
+              }
+            ]
+          },
+          {
+            "key": "process",
+            "letter": "C",
+            "label": "Process",
+            "expr": "rate*time/cavity",
+            "fields": [
+              [
+                "name",
+                "Process",
+                "text",
+                null,
+                {
+                  "req": true
+                }
+              ],
+              [
+                "machine",
+                "M/C",
+                "text",
+                null,
+                {}
+              ],
+              [
+                "cavity",
+                "Cavity",
+                "number",
+                null,
+                {
+                  "positive": true,
+                  "def": 1
+                }
+              ],
+              [
+                "time",
+                "CT · sec",
+                "number",
+                null,
+                {}
+              ],
+              [
+                "rate",
+                "Cost/CT · THB/sec",
+                "number",
+                null,
+                {}
+              ]
+            ],
+            "adj": []
+          },
+          {
+            "key": "investment",
+            "letter": "D",
+            "label": "Investment",
+            "expr": "amount/volume",
+            "fields": [
+              [
+                "name",
+                "Mold / die / jig",
+                "text",
+                null,
+                {
+                  "req": true
+                }
+              ],
+              [
+                "origin",
+                "Imp / Loc",
+                "origin",
+                [
+                  "Local",
+                  "Import"
+                ],
+                {}
+              ],
+              [
+                "amount",
+                "Total investment · THB",
+                "number",
+                null,
+                {}
+              ],
+              [
+                "volume",
+                "Volume · pcs",
+                "number",
+                null,
+                {
+                  "positive": true,
+                  "def": 1
+                }
+              ]
+            ],
+            "adj": []
+          },
+          {
+            "key": "packing",
+            "letter": "E",
+            "label": "Packing & transport",
+            "expr": "amount/qty",
+            "fields": [
+              [
+                "name",
+                "Type",
+                "text",
+                null,
+                {
+                  "req": true
+                }
+              ],
+              [
+                "amount",
+                "Cost · THB",
+                "number",
+                null,
+                {}
+              ],
+              [
+                "qty",
+                "Qty · pcs",
+                "number",
+                null,
+                {
+                  "positive": true,
+                  "def": 1
+                }
+              ]
+            ],
+            "adj": []
+          }
+        ],
+        "profit": {
+          "percent": 15,
+          "base": "process",
+          "bases": [
+            "process",
+            "subtotal"
+          ],
+          "lock": false
+        },
+        "spare": {
+          "percent": 0,
+          "base": "process",
+          "lock": false
+        },
+        "rounding": {
+          "decimals": 2,
+          "section": "round",
+          "profit": "truncate",
+          "spare": "truncate",
+          "total": "round"
+        },
+        "total": "subtotal+profit+spare"
+      }
+    },
+    "sets": [
+      {
+        "name": "สูตรมาตรฐานชิ้นส่วน",
+        "formats": [
+          "Single Part",
+          "Assembly"
+        ]
+      },
+      {
+        "name": "สูตรชุดประกอบ",
+        "formats": [
+          "Assembly"
+        ]
+      }
+    ]
+  },
+  "excelInjection": {
+    "defaultTotal": 56.97,
+    "withCustomerPercentages": {
+      "sections": {
+        "material": {
+          "base": 8.288,
+          "extra": 0.24864,
+          "value": 8.54
+        },
+        "components": {
+          "base": 2.1,
+          "extra": 0.063,
+          "value": 2.16
+        },
+        "process": {
+          "base": 34.525000000000006,
+          "extra": 0,
+          "value": 34.53
+        },
+        "packing": {
+          "base": 0.9,
+          "extra": 0,
+          "value": 0.9
+        },
+        "equipment": {
+          "base": 4,
+          "extra": 1.7262500000000003,
+          "value": 5.73
+        }
+      },
+      "A": 8.54,
+      "B": 2.16,
+      "C": 34.53,
+      "D": 0.9,
+      "E": 5.73,
+      "subtotal": 51.86,
+      "profit": 5.17,
+      "spare": 5.17,
+      "total": 62.2
+    },
+    "excelCachedUnrounded": 62.20839000000001,
+    "excelDisplay2": 62.21
+  },
+  "newRequestDefaults": {
+    "rtp": "",
+    "quantity": "1",
+    "drawing": "A01",
+    "requestAttachmentInputs": 0
+  },
+  "dispatchAcceptedWithMissingMaster": {
+    "request": "RFQ-2026-0282",
+    "form": {
+      "formulaVersion": 1,
+      "quantity": 1,
+      "drawing": "A01",
+      "effective": "2026-12-18",
+      "reviewDueDate": "2027-02-18",
+      "cadence": 3,
+      "requestedOn": "2026-11-18",
+      "costs": {
+        "format": "Single Part",
+        "fv": 1,
+        "profit": 15,
+        "basis": "process",
+        "spare": 0,
+        "material": [
+          {
+            "code": "",
+            "name": "",
+            "origin": "Local",
+            "weight": 0,
+            "scrap": 0,
+            "rate": null
+          }
+        ],
+        "materialLoss": 3,
+        "components": [],
+        "componentLoss": 0,
+        "process": [
+          {
+            "name": "",
+            "machine": "",
+            "cavity": 1,
+            "time": 0,
+            "rate": null
+          }
+        ],
+        "packing": [],
+        "equipment": [],
+        "pm": 5,
+        "pmBasis": "process"
+      },
+      "itemSnapshot": {
+        "code": "AUDIT-FIRST-TIME",
+        "name": "Audit new part with missing customer headers",
+        "format": "Single Part",
+        "rtp": "",
+        "family": "AUDIT-FIRST-TIME",
+        "supplierCode": "40110020",
+        "supplierName": "General Chemicals (Thailand) Co., Ltd."
+      }
+    }
+  },
+  "newAssemblyBom": {
+    "masterChildren": [
+      {
+        "code": "AUDIT-CHILD-1",
+        "qty": 2
+      },
+      {
+        "code": "AUDIT-CHILD-2",
+        "qty": 1
+      }
+    ],
+    "generatedRows": [
+      {
+        "partNo": "",
+        "name": "",
+        "origin": "Local",
+        "rate": null,
+        "qty": 1
+      }
+    ]
+  },
+  "supplierEditable": {
+    "quantity": true,
+    "effective": true,
+    "drawing": true,
+    "profit": true,
+    "spare": true,
+    "profitBase": true,
+    "endingInput": false
+  },
+  "validationWithoutMaterialCodeOrProcess": "",
+  "submission": {
+    "status": "Supplier approval",
+    "quantity": 999,
+    "drawing": "SUPPLIER-CHANGED",
+    "effective": "2020-01-01",
+    "profit": 99,
+    "total": 19.9,
+    "materialCode": "",
+    "formulaVersion": 1
+  }
+}

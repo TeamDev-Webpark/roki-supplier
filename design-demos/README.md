@@ -1,5 +1,7 @@
 # WEBPARK sourcing workspace
 
+Quotation forms are classified on the part master as **Single Part — QT-COMPONENT / PART STEEL** or **Assembly — QT-ASSY**. The formula library starts with these two categories and filters compatible sets. New sets inherit the selected category; existing shared sets and issued versions remain intact. Requests show the master category and offer compatible formula versions. `npm run verify:formula-categories` covers category selection, editing, creation, master validation and request compatibility.
+
 Use **Reset demo data** in the top-right header of either portal to restore the initial fixtures, including due-review items. Confirmation is required because it discards trial changes across both portals in this browser. The selected account, language and unrelated browser data are retained. Other open portal tabs reload the restored dataset. Run `npm run verify:demo-reset` to check restoration after dispatch, cancellation, confirmation, shared-tab updates and mobile layout.
 
 The current operational UI separates **Due for review**, **Active schedules**, and **First-time request**. Due items and sent cycles have separate tables. **Request tracking** groups current work by Supplier, WEBPARK Check, and WEBPARK Approve, with one owner/status/action per row. Unsent saved records remain available in the tracking filter; there is no separate draft-request menu.
@@ -72,6 +74,12 @@ CSV is a review export, not an SAP upload file. Actual SAP format and calculatio
 
 Both `roki.html` and `supplier.html` load **`typography.css`**. The default font is **Prompt**, loaded from Google Fonts in that shared file. Change `--font-family-ui` in that file to change the main font for both portals, including forms, tables, dialogs and printed quotation text. Put custom font imports or `@font-face` declarations in the same file. `--font-size-base` controls the root font size; component-specific sizes remain in the layout styles. Code and simulated signature fonts are also configured there as `--font-family-code` and `--font-family-signature`.
 
+## Customer formula sets
+
+Injection, Rubber, Steel (from `docs/sample -QT.xls`) and Assembly · QT-ASSY (from `docs/QT-ASSY.pdf`) are built-in formula sets, selectable per part when a request is created. Differences handled: PM/interest basis (process cost vs each tool’s cost), per-line loss and maintenance, tool repayment, Common / New investment, packing as cost × used ÷ shared quantity, and rounding (none between steps in Excel; line by line on the paper form). The sets reproduce every example in the customer files exactly; see `QUOTATION-MAPPING.md`.
+
+Assemblies: a new cost form gets one component row per BOM entry; where a component is a part of the same supplier with an approved quotation, its price is linked (read-only, refreshable, can be unlinked). Add part can also create the component parts that are missing from the list.
+
 ## Language selection
 
 Switch between English and Thai with the **EN | ไทย** control on the login page and in the top bar (also on mobile). The choice is remembered in the browser. Thai text lives in `i18n-th.js` (exact strings and patterns); `i18n.js` applies it after each render, so part numbers, supplier names and text typed by users are never translated. To add UI text, add it to `i18n-th.js`; `verify-i18n.cjs` fails if any screen still shows untranslated text in Thai.
@@ -137,3 +145,5 @@ Approve can send an approved RFQ directly from the same detail screen, without r
 `sourcing.js` manages independent formula sets, version selection, per-item request specifications, blank cost templates and additive migration. `request-approval.js` now implements direct draft/send/cancel actions only. No WEBPARK request approval is required. Each Supplier notice snapshots its own assigned forms and formula-version IDs. Formula saves append versions within one named set and never rewrite existing costs. Issue and Approve can maintain the library; Check and Supplier accounts cannot edit formulas.
 
 Use `npm run verify:direct-sourcing` and `npm run verify:sourcing-pages` for the current flow. Earlier request-approval tests describe the retired flow.
+
+Issue can attach Drawing/specification files directly to a request (PDF, PNG, JPG, WebP; 5 files, 2 MB each, 4 MB total) and record each document revision. Drafts allow replacing/removing files; saved revisions remain in request history. Dispatch copies file contents and document revisions into the Supplier notice, independent of later changes to part master data or links. Supplier downloads the fixed files from request details; external links remain optional and their contents are not frozen. Browser storage limits still apply; a failed save restores the previous data.
