@@ -1,0 +1,45 @@
+@import url("https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700;800&display=swap");
+
+/*
+ * Shared typography for roki.html and supplier.html.
+ * Change --font-family-ui below to change the font in BOTH portals.
+ * Add any @font-face declarations or font imports in THIS file as well.
+ * Keep a Thai-capable fallback when choosing a different font.
+ */
+:root {
+  /* Main font: menus, headings, tables, forms, dialogs and printed quotations. */
+  --font-family-ui: "Prompt", "Noto Sans Thai", "Leelawadee UI", Tahoma, sans-serif;
+  --font-size-base: 13px;
+
+  /* Special-purpose fonts, also managed here. */
+  --font-family-code: ui-monospace, Consolas, "SFMono-Regular", monospace;
+  --font-family-signature: "Segoe Script", "Brush Script MT", cursive;
+
+  font-family: var(--font-family-ui);
+  font-size: var(--font-size-base);
+  font-synthesis: none;
+}
+
+body {
+  font-family: inherit;
+}
+
+button,
+input,
+select,
+textarea {
+  font-family: inherit;
+}
+
+code,
+.mono {
+  font-family: var(--font-family-code);
+}
+
+.qt-signed.esign {
+  font-family: var(--font-family-signature);
+}
+
+.qt-signed em {
+  font-family: var(--font-family-ui);
+}

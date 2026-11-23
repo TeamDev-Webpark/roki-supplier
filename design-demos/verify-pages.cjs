@@ -1,5 +1,28 @@
-const {chromium}=require('/Users/vikanda/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright');
-const assert=require('node:assert/strict');
-(async()=>{const browser=await chromium.launch({headless:true,executablePath:'/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'});const context=await browser.newContext({viewport:{width:1500,height:1100}});const page=await context.newPage();const errors=[];page.on('pageerror',e=>errors.push(e.message));page.on('console',m=>{if(m.type()==='error')errors.push(m.text())});
-for(const [portal,accounts,routes]of [['roki',['r-issue','r-check','r-approve'],['overview','quotes','approvals','schedule','history','parts','suppliers','exports']],['supplier',['s1-issue','s1-approve','s2-issue','s2-approve'],['overview','quotes','approvals','requests','history','parts']]]){for(const account of accounts){await page.goto('http://localhost:4173/'+portal+'.html#overview');await page.evaluate(p=>sessionStorage.removeItem('roki-session-'+p),portal);await page.reload();await page.locator('#demo-account').selectOption(account);await page.locator('[data-action="login"]').click();await page.locator('.metrics').waitFor();assert.equal(await page.locator('.metric').count(),4);for(const route of routes){await page.goto('http://localhost:4173/'+portal+'.html#'+route);await page.locator('.content h1').waitFor();assert.equal(await page.getByText('This view could not be loaded.',{exact:false}).count(),0,account+' '+route);}console.log('PASS '+account+': overview and all '+routes.length+' pages');}}
-await page.goto('http://localhost:4173/roki.html#overview');await page.screenshot({path:'design-demos/previews/roki-overview-fixed.png',fullPage:true});assert.deepEqual(errors,[]);console.log('PASS: all 7 accounts, 48 role/page combinations, no caught console or uncaught browser errors.');await browser.close()})();
+'use strict';
+/* Every demo account opens every page it can reach, in English and Thai, with no page or console errors. */
+const {run,reset,login,assert}=require('./_env.cjs');
+const ROKI=['internal-pending','supplier-waiting','process','process/i1','overview','request-new','request-register','request-drafts','request-dispatch','request-review','request-tracking','quotes','approvals','schedule','history','parts','suppliers','reports','outbox','exports','part/i1','supplier/s1','account/s1-issue','price-record/0','request-detail/N-DEMO-001/i6'];
+const SUPPLIER=['process','overview','quotes','approvals','sent','requests','history','parts','reports','outbox'];
+const GROUPS=[['roki',['r-issue','r-check','r-approve'],ROKI],['supplier',['s1-issue','s1-approve','s2-issue','s2-approve','s3-issue','s3-approve'],SUPPLIER]];
+run('verify-pages',async({base,context,shot})=>{
+  const page=await context.newPage();let combos=0;
+  for(const lang of ['en','th']){
+    await page.addInitScript(l=>{try{localStorage.setItem('roki-lang',l)}catch{}},lang);
+    for(const [portal,accounts,routes] of GROUPS){
+      for(const account of accounts){
+        await reset(page,base,portal);await page.evaluate(l=>localStorage.setItem('roki-lang',l),lang);await page.reload();
+        await login(page,base,portal,account);
+        await page.locator('.metrics').waitFor();assert.equal(await page.locator('.metric').count(),4,`${account} metrics`);
+        for(const route of routes){
+          if(portal==='roki'&&(['request-new','request-drafts'].includes(route)&&account!=='r-issue'||route==='request-dispatch'&&!['r-issue','r-approve'].includes(account)||route==='request-review'&&account==='r-issue'))continue;
+          await page.goto(`${base}${portal}.html#${route}`);await page.locator('.content h1').waitFor();
+          assert.equal(await page.getByText('This view could not be loaded.').count()+await page.getByText('ไม่สามารถโหลดหน้านี้ได้').count(),0,`${lang} ${account} ${route}`);
+          combos++;
+        }
+      }
+    }
+  }
+  await page.evaluate(()=>localStorage.setItem('roki-lang','en'));
+  await login(page,base,'roki','r-check','overview');await shot(page,'roki-overview-fixed.png');
+  console.log(`  ${combos} account/page/language combinations opened`);
+});

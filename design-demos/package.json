@@ -1,0 +1,21 @@
+{
+  "name": "roki-supplier-demo-checks",
+  "private": true,
+  "description": "Browser checks for the ROKI supplier price demo. Uses the installed Chrome; no browser download.",
+  "scripts": {
+    "verify": "node verify-all.cjs",
+    "verify:demo-data": "node verify-demo-data.cjs",
+    "verify:lifecycle": "node verify-lifecycle.cjs",
+    "verify:request-documents": "node verify-request-documents.cjs",
+    "verify:approve-dispatch": "node verify-approve-dispatch.cjs",
+    "verify:direct-sourcing": "node verify-direct-sourcing.cjs",
+    "verify:sourcing-pages": "node verify-sourcing-pages.cjs",
+    "verify:operations-desk": "node verify-operations-desk.cjs",
+    "verify:document-details": "node verify-document-details.cjs",
+    "verify:supplier-request-policy": "node verify-supplier-request-policy.cjs",
+    "verify:demo-reset": "node verify-demo-reset.cjs"
+  },
+  "devDependencies": {
+    "playwright-core": "1.49.1"
+  }
+}

@@ -1,0 +1,50 @@
+'use strict';
+const {run,login,switchTo,store,assert}=require('./_env.cjs');
+run('Approve hands approved RFQs directly to Supplier',async({base,context})=>{
+ const p=await context.newPage();await login(p,base,'roki','r-check','request-review');
+ const id=await p.evaluate(()=>{
+  const r=db.priceRequests.find(r=>r.demoScenario==='internal-Pending Check');
+  const extra=db.items.find(i=>i.supplier!==db.items.find(i=>i.id===r.items[0]).supplier&&activeQuote(i.id)&&!wfActive(i.id)&&!rfqReserved(i.id));
+  r.items.push(extra.id);persist();return r.id;
+ });
+ const record=async()=>(await store(p)).priceRequests.find(r=>r.id===id);
+ const before=(await store(p)).notifications.length;
+ const act=async action=>{await p.locator(`[data-rfq="${action}"]`).click();await p.locator('#rfq-confirm').check();await p.locator('[data-action="rfq-confirm"]').click()};
+ await switchTo(p,base,'roki','r-approve','request-register/'+id);
+ assert.equal(await p.locator('[data-rfq="advance"]').count(),0,'Cannot bypass Check');
+ assert.equal(await p.locator('[data-rfq="send"]').count(),0,'Cannot send before approval');
+ await p.evaluate(id=>rfqActionDialog(id,'send'),id);assert.equal(await p.locator('.dialog').count(),0);
+ await switchTo(p,base,'roki','r-check','request-register/'+id);await act('advance');
+ await switchTo(p,base,'roki','r-approve','request-register/'+id);
+ assert.equal(await p.locator('.side-nav [href="#request-dispatch"]').count(),1,'Approve can reopen dispatch queue');
+ await act('advance');
+ assert.equal((await record()).approvalStatus,'Approved');assert.equal((await record()).deliveryStatus,'NotSent');
+ assert.equal((await store(p)).notifications.length,before,'Approval alone does not deliver');
+ assert.equal(await p.locator('[data-rfq="send"]').count(),1,'Same approver can send without switching accounts');
+ assert.equal(await p.locator('[data-rfq="cancel"],[data-rfq="submit"]').count(),0,'No additional creator rights');
+ assert.equal(await p.locator('.rfq-progress .current strong').innerText(),'Approve','Next actor is Approve');
+ await p.reload();assert.equal(await p.locator('[data-rfq="send"]').count(),1,'Permission survives refresh');
+ await p.goto(base+'roki.html#request-dispatch');assert.equal(await p.locator(`[data-rfq-row="${id}"]`).count(),1);
+ await switchTo(p,base,'roki','r-check','request-register/'+id);
+ assert.equal(await p.locator('[data-rfq="send"]').count(),0);await p.evaluate(id=>rfqActionDialog(id,'send'),id);assert.equal(await p.locator('.dialog').count(),0);
+ await switchTo(p,base,'roki','r-approve','request-register/'+id);
+ await p.evaluate(()=>I18N.set('th'));await act('send');
+ const sent=await record(),after=await store(p),notes=after.notifications.filter(n=>n.priceRequestId===id);
+ assert.equal(sent.approvalStatus,'Approved');assert.equal(sent.deliveryStatus,'Sent');assert.equal(sent.sentBy,'r-approve');assert.equal(sent.createdBy,'r-issue');
+ assert.equal(notes.length,2,'One request for each supplier');assert.equal(after.notifications.length,before+2);
+ assert.equal(sent.trail.at(-1).action,'send');assert.equal(sent.trail.at(-1).role,'Approve');assert.equal(sent.trail.at(-2).role,'Approve');
+ assert.equal(await p.locator('[data-rfq="send"]').count(),0);
+ await p.evaluate(id=>{rfqActionDialog(id,'send');rfqConfirm()},id);assert.equal((await store(p)).notifications.length,before+2,'Repeated send is ignored');
+ await p.goto(base+'roki.html#request-dispatch');assert.equal(await p.locator(`[data-rfq-row="${id}"]`).count(),0,'Sent request leaves dispatch queue');
+ for(const n of notes){
+  await switchTo(p,base,'supplier',n.supplier+'-issue','requests');
+  assert.equal(await p.locator(`[data-request-row="${n.id}"]`).count(),n.items.length,'Supplier sees delivered items');
+ }
+ await switchTo(p,base,'roki','r-issue','request-dispatch');
+ const fallback=await p.evaluate(()=>rfqReady()[0]?.id);assert(fallback,'Creator still has fallback dispatch');
+ await p.goto(base+'roki.html#request-register/'+fallback);assert.equal(await p.locator('[data-rfq="send"]').count(),1);
+ await switchTo(p,base,'roki','r-approve','request-register/'+fallback);
+ await p.evaluate(id=>{db.priceRequests.find(r=>r.id===id).due='2026-01-01';persist()},fallback);
+ await act('send');assert.equal((await store(p)).priceRequests.find(r=>r.id===fallback).deliveryStatus,'NotSent','Expired requests stay unsent');
+ console.log('Verified same-page approval/send, independent statuses, actor audit, supplier grouping, role gates, duplicate protection and creator fallback.');
+}).catch(e=>{console.error(e);process.exitCode=1});

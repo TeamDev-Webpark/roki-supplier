@@ -1,2 +1,15 @@
-const {chromium}=require('/Users/vikanda/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright');
-(async()=>{const browser=await chromium.launch({headless:true,executablePath:'/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'});const page=await browser.newPage({viewport:{width:1500,height:1140},deviceScaleFactor:1.5});page.on('pageerror',e=>console.error(e));for(let i=1;i<=3;i++){await page.goto('file:///Users/vikanda/Projects/_Archive/_2026/Roki/SupplierPrice/design-demos/index.html?concept='+i);await page.addStyleTag({content:'.concept-bar{display:none}.layout,.desk{min-height:100vh}.footnote{margin-bottom:10px}'});await page.screenshot({path:`design-demos/previews/roki-design-0${i}.png`,fullPage:true});console.log('Saved design '+i);}await browser.close();})();
+'use strict';
+/* Regenerates the reference screenshots in previews/ from the running demo (English and Thai). */
+const {run,reset,login}=require('./_env.cjs');
+run('render-previews',async({base,context,shot})=>{
+  const page=await context.newPage();
+  await reset(page,base,'roki');
+  for(const lang of ['en','th']){
+    await page.evaluate(l=>localStorage.setItem('roki-lang',l),lang);
+    const sfx=lang==='th'?'-th':'';
+    await login(page,base,'roki','r-check','quote/Q-2025-0041');await page.reload();await page.locator('.compare-table').waitFor();await shot(page,`roki-comparison-quotation${sfx}.png`);
+    await page.goto(base+'roki.html#print/Q-2026-0046');await page.reload();await page.locator('.qt-form').waitFor();await shot(page,`roki-print-quotation${sfx}.png`);
+    await page.goto(base+'roki.html#reports/17253-KWN-9000');await page.reload();await page.locator('.price-chart').waitFor();await shot(page,`roki-price-history${sfx}.png`);
+    await page.goto(base+'roki.html#quote/Q-2026-0105');await page.reload();await page.locator('.compare-table').waitFor();await shot(page,`roki-assembly-quotation${sfx}.png`);
+  }
+});
