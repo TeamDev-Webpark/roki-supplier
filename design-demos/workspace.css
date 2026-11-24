@@ -272,3 +272,8 @@ input.mono{font-size:12px}
 .rfq-form-page .body-pad{max-width:1040px}
 .rfq-form-actions{position:sticky;bottom:0;display:flex;justify-content:flex-end;gap:10px;flex-wrap:wrap;padding:16px 24px;background:#fff;border-top:1px solid var(--line);border-radius:0 0 9px 9px}
 .rfq-form-actions .button{width:auto}
+.request-terms-title{margin:26px 0 4px;font-size:14px}
+.request-supply{margin-top:18px}
+.request-supply h4{font-size:13px;margin-bottom:4px}
+.request-info div{margin-top:4px}
+.request-info small{display:block;margin-top:8px}

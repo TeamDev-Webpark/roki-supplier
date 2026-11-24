@@ -3,7 +3,7 @@
    or BASE_URL to test an already running server). */
 const {spawnSync}=require('node:child_process');
 // Direct sourcing replaces the earlier pre-send approval workflow.
-const checks=['verify-request-drawings','verify-direct-sourcing','verify-sourcing-pages','verify-operations-desk','verify-document-details','verify-supplier-request-policy','verify-demo-reset','verify-formula-categories','verify-customer-sheets','verify-bom-links'];
+const checks=['verify-request-drawings','verify-direct-sourcing','verify-sourcing-pages','verify-operations-desk','verify-document-details','verify-supplier-request-policy','verify-demo-reset','verify-formula-categories','verify-customer-sheets','verify-bom-links','verify-request-details'];
 let failed=0;
 for(const name of checks){
   const r=spawnSync(process.execPath,[`${__dirname}/${name}.cjs`],{stdio:'inherit'});

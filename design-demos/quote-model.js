@@ -70,8 +70,8 @@ const r2=v=>Math.round(v*100)/100;
    field = [key, label, type('text'|'number'|'origin'), options, {positive, def, req}] */
 const fld=(key,label,type,options,flags)=>[key,label,type,options||null,flags||{}];
 function defaultFormats(){
-  const fmt=(qtyLabel,sections)=>({qtyLabel,sections,profit:{percent:15,base:'process',bases:['process','subtotal'],lock:false},spare:{percent:0,base:'process',lock:false},rounding:{decimals:2,section:'round',profit:'truncate',spare:'truncate',total:'round'},total:'subtotal+profit+spare'});
-  const adj=(key,label,percent,extra)=>({key,label,percent,of:'self',lock:false,...extra});
+  const fmt=(qtyLabel,sections)=>({qtyLabel,sections,profit:{percent:15,base:'process',bases:['process','subtotal'],lock:true},spare:{percent:0,base:'process',lock:true},rounding:{decimals:2,section:'round',profit:'truncate',spare:'truncate',total:'round'},total:'subtotal+profit+spare'});
+  const adj=(key,label,percent,extra)=>({key,label,percent,of:'self',lock:true,...extra});
   return {
     'Single Part':fmt('Quantity / year',[
       {key:'material',letter:'A',label:'Material',expr:'(weight+scrap)*rate',
@@ -113,7 +113,7 @@ const CH=(key,label,options,def,flags)=>fld(key,label,'choice',options,{def,...f
 const LOSS_OPTS=['Not included','Included'],REPAID_OPTS=['Not repaid','Repaid'],INV_OPTS=['New investment','Common tool'];
 /* v2: the three Excel sheets + the QT-ASSY paper form. Excel does not round between steps; QT-ASSY rounds every line. */
 function customerSheetFormats(){
-  const adj=(key,label,percent,extra)=>({key,label,percent,of:'self',lock:false,...extra});
+  const adj=(key,label,percent,extra)=>({key,label,percent,of:'self',lock:true,...extra});
   const noRound={decimals:2,row:'none',section:'none',profit:'none',spare:'none',total:'round'};
   const sheet=kind=>{
     const lossDef=kind==='Steel'?0:3,perLinePM=kind!=='Injection';
@@ -130,7 +130,7 @@ function customerSheetFormats(){
         fields:[fld('name','Type','text',null,{req:true}),fld('amount','Cost · THB','number'),fld('perPiece','Used per piece','number',null,{def:1}),fld('qty','Shared over qty · pcs','number',null,{positive:true,def:1}),fld('pm','Maintenance %','number',null,{def:0})],adj:[]},
       {key:'equipment',letter:'E',label:'Equipment',expr:perLinePM?'amount/volume*((1-repaid)+pm/100)':'amount/volume*(1-repaid)',
         fields:equip,adj:perLinePM?[]:[adj('pm','PM / interest',5,{of:'process'})]}
-    ],profit:{percent:15,base:'process',bases:['process','subtotal'],lock:false},spare:{percent:15,base:'process',lock:false},rounding:{...noRound},total:'subtotal+profit+spare'};
+    ],profit:{percent:15,base:'process',bases:['process','subtotal'],lock:true},spare:{percent:15,base:'process',lock:true},rounding:{...noRound},total:'subtotal+profit+spare'};
   };
   const asm={qtyLabel:'Monthly quantity',sections:[
     {key:'components',letter:'A',label:'Component parts',expr:'rate*qty',
@@ -143,7 +143,7 @@ function customerSheetFormats(){
       fields:[fld('name','Mold / die / jig','text',null,{req:true}),fld('origin','Imp / Loc / Supply','origin',ORIGIN3),fld('common','Common investment · THB','number'),fld('newInv','New investment · THB','number',null,{alias:['amount']}),fld('volume','Volume · pcs','number',null,{positive:true,def:1}),CH('repaid','Tool repayment',REPAID_OPTS,REPAID_OPTS[0]),fld('pm','Maintenance %','number',null,{def:0}),fld('pmBase','Maintenance base · THB/pc','number',null,{def:0})],adj:[]},
     {key:'packing',letter:'E',label:'Packing & transport',expr:'amount*perPiece/qty*(1+pm/100)',
       fields:[fld('name','Type','text',null,{req:true}),fld('amount','Cost · THB','number'),fld('perPiece','Used per piece','number',null,{def:1}),fld('qty','Qty · pcs','number',null,{positive:true,def:1}),fld('pm','Maintenance %','number',null,{def:0})],adj:[]}
-  ],profit:{percent:15,base:'process',bases:['process','subtotal'],lock:false},spare:{percent:0,base:'process',lock:false},rounding:{decimals:2,row:'round',section:'round',profit:'truncate',spare:'truncate',total:'round'},total:'subtotal+profit+spare'};
+  ],profit:{percent:15,base:'process',bases:['process','subtotal'],lock:true},spare:{percent:0,base:'process',lock:true},rounding:{decimals:2,row:'round',section:'round',profit:'truncate',spare:'truncate',total:'round'},total:'subtotal+profit+spare'};
   return {injection:sheet('Injection'),rubber:sheet('Rubber'),steel:sheet('Steel'),'assembly-qt':asm};
 }
 /* Sets: the two built-in ones (as before) plus one per customer sheet. Every version carries both formats so editors never meet a gap. */
@@ -379,23 +379,23 @@ function signatures(q){
   trail.slice(Math.max(start,0)).forEach(t=>{if(t.stage)sig[t.stage]=t;if(t.stage==='S-Issue')for(const k of Object.keys(sig))if(k!=='S-Issue')delete sig[k]});
   return sig;
 }
-const snapshotOf=q=>q?{quote:q.id,revision:q.revision,total:q.total,costs:structuredClone(q.costs),effective:q.effective,date:q.quoteDate||q.effective,remark:q.remark,quantity:q.quantity,drawing:q.drawing,itemSnapshot:q.itemSnapshot?structuredClone(q.itemSnapshot):null,attachments:structuredClone(q.attachments||[]),trail:structuredClone(q.trail||[])}:null;
+const snapshotOf=q=>q?{quote:q.id,revision:q.revision,total:q.total,ending:q.ending||null,qtyPeriod:q.qtyPeriod||null,costs:structuredClone(q.costs),effective:q.effective,date:q.quoteDate||q.effective,remark:q.remark,quantity:q.quantity,drawing:q.drawing,itemSnapshot:q.itemSnapshot?structuredClone(q.itemSnapshot):null,attachments:structuredClone(q.attachments||[]),trail:structuredClone(q.trail||[])}:null;
 
 /* ---------- Demo data, transcribed from the sample Excel / PDF quotations in docs/ ---------- */
 function seed(){
   const SP=o=>Object.assign(blankCosts('Single Part',formulaVersion(1)),{material:[],components:[],process:[],packing:[],equipment:[],materialLoss:0,componentLoss:0,pm:0,spare:0},o);
   const AS=o=>Object.assign(blankCosts('Assembly',formulaVersion(1)),o);
   const items=[
-    {id:'i1',code:'17230-KWN-9000',name:'IJ COVER, AIR/C',supplier:'s1',format:'Single Part',rtp:'S001571-004-01',drawing:'M206-F-26',qty:25000,next:'2026-11-01',cadence:3},
-    {id:'i2',code:'17253-KWN-9000',name:'TUBE, AIR CONN',supplier:'s2',format:'Single Part',rtp:'PRC0006-046-E20',drawing:'M206-F-26',qty:25000,next:'2026-11-18',cadence:3},
-    {id:'i3',code:'17211-K16-9000-H1',name:'GUARD ELEMENT',supplier:'s3',format:'Single Part',rtp:'LOU0002-034-J21',drawing:'M206-F-26',qty:178474,next:'2026-12-01',cadence:3},
-    {id:'i4',code:'17253-KWN-9000',name:'TUBE, AIR CONN',supplier:'s1',format:'Single Part',rtp:'S001571-011-02',drawing:'M206-F-26',qty:25000,next:'2026-11-15',cadence:3},
-    {id:'i5',code:'17221-K1Z-J100',name:'CASE ASSY, AIR/C',supplier:'s1',format:'Assembly',rtp:'S001571-020-01',drawing:'04',qty:2400,next:'2026-11-18',cadence:1},
-    {id:'i6',code:'13280-0226',name:'HOLDER',supplier:'s1',format:'Single Part',rtp:'S005109-004-01',drawing:'—',qty:12000,next:'2027-01-01',cadence:3},
-    {id:'i7',code:'17211-KZL-9300-21',name:'PLATE',supplier:'s3',format:'Single Part',rtp:'LOU0002-035-J21',drawing:'M206-F-26',qty:250000,next:'2026-11-10',cadence:3},
-    {id:'i8',code:'17211-K16-9022',name:'MESH',supplier:'s3',format:'Single Part',rtp:'LOU0002-036-J21',drawing:'M206-F-26',qty:250000,next:'2027-02-01',cadence:3},
+    {id:'i1',formulaSet:'injection',code:'17230-KWN-9000',name:'IJ COVER, AIR/C',supplier:'s1',format:'Single Part',rtp:'S001571-004-01',drawing:'M206-F-26',qty:25000,next:'2026-11-01',cadence:3},
+    {id:'i2',formulaSet:'rubber',code:'17253-KWN-9000',name:'TUBE, AIR CONN',supplier:'s2',format:'Single Part',rtp:'PRC0006-046-E20',drawing:'M206-F-26',qty:25000,next:'2026-11-18',cadence:3},
+    {id:'i3',formulaSet:'steel',code:'17211-K16-9000-H1',name:'GUARD ELEMENT',supplier:'s3',format:'Single Part',rtp:'LOU0002-034-J21',drawing:'M206-F-26',qty:178474,next:'2026-12-01',cadence:3},
+    {id:'i4',formulaSet:'rubber',code:'17253-KWN-9000',name:'TUBE, AIR CONN',supplier:'s1',format:'Single Part',rtp:'S001571-011-02',drawing:'M206-F-26',qty:25000,next:'2026-11-15',cadence:3},
+    {id:'i5',formulaSet:'assembly-qt',code:'17221-K1Z-J100',name:'CASE ASSY, AIR/C',supplier:'s1',format:'Assembly',rtp:'S001571-020-01',drawing:'04',qty:2400,next:'2026-11-18',cadence:1},
+    {id:'i6',formulaSet:'injection',code:'13280-0226',name:'HOLDER',supplier:'s1',format:'Single Part',rtp:'S005109-004-01',drawing:'—',qty:12000,next:'2027-01-01',cadence:3},
+    {id:'i7',formulaSet:'steel',code:'17211-KZL-9300-21',name:'PLATE',supplier:'s3',format:'Single Part',rtp:'LOU0002-035-J21',drawing:'M206-F-26',qty:250000,next:'2026-11-10',cadence:3},
+    {id:'i8',formulaSet:'steel',code:'17211-K16-9022',name:'MESH',supplier:'s3',format:'Single Part',rtp:'LOU0002-036-J21',drawing:'M206-F-26',qty:250000,next:'2027-02-01',cadence:3},
     /* a second source with no quotation yet and not on the schedule: shows how a new pair is added */
-    {id:'i9',code:'17211-K16-9022',name:'MESH',supplier:'s1',format:'Single Part',rtp:'S001571-036-04',drawing:'M206-F-26',qty:250000,next:null,cadence:3}
+    {id:'i9',formulaSet:'steel',code:'17211-K16-9022',name:'MESH',supplier:'s1',format:'Single Part',rtp:'S001571-036-04',drawing:'M206-F-26',qty:250000,next:null,cadence:3}
   ];
   /* sub-parts: GUARD ELEMENT is made of PLATE and MESH, which are managed parts; CASE ASSY uses purchased components */
   items.find(i=>i.id==='i3').children=[{code:'17211-KZL-9300-21',qty:1},{code:'17211-K16-9022',qty:1}];

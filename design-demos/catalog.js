@@ -64,10 +64,15 @@ function parts(){
   const codes=new Set(items.map(i=>i.code)).size;
   return heading('Part master',roki?'Parts & assemblies':'My parts',roki?'Create parts and assemblies, import them from a file, and link each one to its suppliers. Prices come from approved quotations.':'Current approved prices and review dates for each item–supplier pair.',manage?actionButton('Import from file','import-parts')+actionButton('Add part','add-part',true):'')
   +(roki?'':'<div class="highlight-note blue">These are the parts ROKI has assigned to your company. You can prepare a quotation for a part only after ROKI sends a price update request for it.</div>')+`<section class="panel"><div class="filters"><div class="search">${icon('search')}<input id="search" value="${esc(search)}" placeholder="Search part, RTP code or supplier…"></div>${roki?`<select id="supplier-filter"><option value="">All suppliers</option>${suppliers.map(s=>`<option value="${s.id}" ${filterSupplier===s.id?'selected':''}>${esc(s.name)}</option>`).join('')}</select>`:''}<select id="format-filter"><option value="">All formats</option>${FORMAT_NAMES.map(f=>`<option value="${f}" ${formatFilter===f?'selected':''}>${f}</option>`).join('')}</select></div>`
-  +`<div class="table-wrap"><table class="data-table"><thead><tr><th>Part / item code</th><th>Supplier</th><th>Format</th><th>RTP code</th><th class="num">Approved · THB</th><th>Last update</th><th>Next review</th>${roki?'<th></th>':'<th>Price request</th>'}</tr></thead><tbody>${items.map(i=>`<tr ${detailRowAttrs('part/'+i.id)}><td><strong>${detailRecordLink('part/'+i.id,i.code)}</strong><small>${esc(i.name)}</small>${childrenHtml(i)}</td><td>${esc(supplierName(i.supplier))}</td><td>${esc(i.format)}</td><td>${esc(i.rtp||'—')}</td><td class="num price">${priceText(i)}</td><td>${date(i.last)}</td><td>${i.next?`${date(i.next)}<small>${cadenceText(i.cadence)}</small>`:statusPill('Not scheduled','gray')}</td>${manage?`<td><button class="date-button" data-edit-part="${i.id}">Edit</button></td>`:`<td>${roki?'':requestCell(i)}</td>`}</tr>`).join('')}</tbody></table>${!items.length?'<div class="empty">No parts match this view.</div>':''}</div><div class="table-footer"><span>${items.length} item–supplier pairs · ${codes} part code${codes===1?'':'s'}</span><span>Prices come from approved quotations</span></div></section>`;
+  +`<div class="table-wrap"><table class="data-table"><thead><tr><th>Part / item code</th><th>Supplier</th><th>Format</th><th>RTP code</th><th class="num">Approved · THB</th><th>Last update</th><th>Next review</th>${roki?'<th></th>':'<th>Price request</th>'}</tr></thead><tbody>${items.map(i=>`<tr ${detailRowAttrs('part/'+i.id)}><td><strong>${detailRecordLink('part/'+i.id,i.code)}</strong><small>${esc(i.name)}</small>${childrenHtml(i)}</td><td>${esc(supplierName(i.supplier))}</td><td>${esc(i.format)}${i.formulaSet?`<small>${esc(FORMULAS.sets.find(x=>x.id===i.formulaSet)?.name||i.formulaSet)}</small>`:''}</td><td>${esc(i.rtp||'—')}</td><td class="num price">${priceText(i)}</td><td>${date(i.last)}</td><td>${i.next?`${date(i.next)}<small>${cadenceText(i.cadence)}</small>`:statusPill('Not scheduled','gray')}</td>${manage?`<td><button class="date-button" data-edit-part="${i.id}">Edit</button></td>`:`<td>${roki?'':requestCell(i)}</td>`}</tr>`).join('')}</tbody></table>${!items.length?'<div class="empty">No parts match this view.</div>':''}</div><div class="table-footer"><span>${items.length} item–supplier pairs · ${codes} part code${codes===1?'':'s'}</span><span>Prices come from approved quotations</span></div></section>`;
 }
 
 /* ---------- add / edit a part ---------- */
+function partFormulaOptions(format,selected){
+  const sets=format?FORMULAS.sets.filter(s=>s.formats.includes(format)):[];
+  return `<option value="">${wfText('Not set — choose when creating a request','ยังไม่กำหนด — เลือกตอนสร้างคำขอ')}</option>`+sets.map(s=>`<option value="${esc(s.id)}" ${s.id===selected?'selected':''}>${esc(s.name)}</option>`).join('');
+}
+document.addEventListener('change',e=>{if(e.target.id==='pf-format'){const sel=document.getElementById('pf-formula-set');if(sel)sel.innerHTML=partFormulaOptions(e.target.value,sel.value)}});
 let partEdit=null;
 function partDialog(id){
   if(portal!=='roki'||user?.role!=='Issue')return;
@@ -78,6 +83,7 @@ function partDialog(id){
   `<div class="form-grid dialog-grid"><div class="field"><label for="pf-code">Part code *</label><input id="pf-code" maxlength="40" value="${esc(it?.code||'')}" ${it?'readonly':''} placeholder="e.g. 17230-KWN-9000"></div>
   <div class="field"><label for="pf-name">Part name *</label><input id="pf-name" maxlength="100" value="${esc(it?.name||'')}"></div>
   <div class="field"><label for="pf-format">${wfText("Quotation form category *","ประเภทฟอร์มใบเสนอราคา *")}</label><select id="pf-format" ${it&&codeHasQuotes(it.code)?'disabled':''}>${it?'':`<option value="">${wfText("Select a form category","เลือกประเภทฟอร์ม")}</option>`}${FORMAT_NAMES.map(f=>`<option value="${f}" ${it?.format===f?'selected':''}>${esc(quotationFormLabel(f))}</option>`).join('')}</select><small>${wfText("Set the main form here. Its formula and version are chosen when creating a request. Existing quoted parts keep their category.","กำหนดประเภทหลักที่นี่ แล้วเลือกสูตรและเวอร์ชันตอนสร้างคำขอ รายการที่มีใบเสนอราคาแล้วจะคงประเภทเดิม")}</small></div>
+  <div class="field"><label for="pf-formula-set">${wfText('Formula set for this part','ชุดสูตรของชิ้นส่วนนี้')}</label><select id="pf-formula-set">${partFormulaOptions(it?.format||'',it?.formulaSet)}</select><small>${wfText('Used as the default when creating requests (Injection, Rubber, Steel, QT-ASSY…).','ใช้เป็นค่าเริ่มต้นตอนสร้างคำขอ (Injection, Rubber, Steel, QT-ASSY…)')}</small></div>
   <div class="field"><label for="pf-supplier">Supplier *</label><select id="pf-supplier" ${it?'disabled':''}>${it?'':'<option value="">Select a supplier</option>'}${supplierOpts}</select></div>
   <div class="field"><label for="pf-family">${wfText("Part family / common reference","รหัสกลุ่มชิ้นส่วนกลาง")}</label><input id="pf-family" maxlength="80" value="${esc(it?familyKey(it):'')}"><small>${wfText("Use the same family for equivalent parts with different supplier item codes. Leave empty to use the part code.","ใช้รหัสกลุ่มเดียวกันสำหรับชิ้นส่วนเทียบเท่าที่คนละ Item Code เว้นว่างเพื่อใช้รหัสชิ้นส่วน")}</small></div><div class="field"><label for="pf-rtp">RTP code</label><input id="pf-rtp" maxlength="40" value="${esc(it?.rtp||'')}"></div>
   <div class="field"><label for="pf-drawing">Rev. no. / drawing</label><input id="pf-drawing" maxlength="80" value="${esc(it?.drawing||'')}"></div>
@@ -100,6 +106,7 @@ function savePart(){
   if(!edit&&db.items.some(i=>i.code===code&&i.supplier===supplier))return toast('This part is already linked to this supplier.');
   const sameCode=db.items.filter(i=>i.code===code);
   if(!edit&&sameCode.length&&sameCode[0].format!==format)return toast('This part code already exists in a different format.');
+  const formulaSet=v('pf-formula-set')||null;if(formulaSet&&!FORMULAS.sets.some(s=>s.id===formulaSet&&s.formats.includes(format)))return toast(wfText('Choose a formula set that matches the form category.','เลือกชุดสูตรที่ตรงกับประเภทฟอร์ม'));
   const qtyRaw=v('pf-qty'),qty=qtyRaw===''?0:Number(qtyRaw);
   if(!Number.isFinite(qty)||qty<0)return toast('Quantity per year must be zero or more.');
   const kids=parseChildList(document.getElementById('pf-children').value,code);if(kids.error)return toast(kids.error);
@@ -107,7 +114,7 @@ function savePart(){
   const pair=edit||{id:nextItemId(),code,supplier,price:null,last:null};
   Object.assign(pair,{rtp:v('pf-rtp'),qty,cadence});
   pair.next=wantsSchedule?(nextInput||addMonths(pair.last||TODAY,cadence)):null;
-  for(const i of [pair,...sameCode]){i.family=v('pf-family')||code;i.name=name;i.format=format;i.drawing=v('pf-drawing');i.children=structuredClone(kids.list)}
+  for(const i of [pair,...sameCode]){i.family=v('pf-family')||code;i.name=name;i.format=format;i.drawing=v('pf-drawing');i.children=structuredClone(kids.list);i.formulaSet=formulaSet}
   if(!edit)db.items.push(pair);
   if(document.getElementById('pf-create-children')?.checked)for(const ch of kids.list){
     if(db.items.some(x=>x.code===ch.code&&x.supplier===supplier))continue;
@@ -133,7 +140,7 @@ function confirmDeletePart(){
 /* ---------- import from CSV ---------- */
 let importRows=null;
 const TEMPLATE_HEAD=['part_code','part_name','format','supplier_code','rtp_code','drawing','annual_qty','components','review_months','next_review','part_family'];
-const COLUMN_ALIASES={family:['partfamily','family','commonpartcode'],code:['partcode','code','partno','partnumber','itemcode'],name:['partname','name','description'],format:['format','type','quotationformat'],supplier:['suppliercode','supplier','vendorcode','vendor'],rtp:['rtpcode','rtp'],drawing:['drawing','drawingrev','rev','revno'],qty:['annualqty','qty','quantityperyear','qtyyear','qtyy'],children:['components','bom','subparts','componentparts'],cadence:['reviewmonths','cadence','interval','reviewinterval'],next:['nextreview','nextreviewdate','nextreviewon']};
+const COLUMN_ALIASES={formulaSet:['formulaset','formula','formulasetid'],family:['partfamily','family','commonpartcode'],code:['partcode','code','partno','partnumber','itemcode'],name:['partname','name','description'],format:['format','type','quotationformat'],supplier:['suppliercode','supplier','vendorcode','vendor'],rtp:['rtpcode','rtp'],drawing:['drawing','drawingrev','rev','revno'],qty:['annualqty','qty','quantityperyear','qtyyear','qtyy'],children:['components','bom','subparts','componentparts'],cadence:['reviewmonths','cadence','interval','reviewinterval'],next:['nextreview','nextreviewdate','nextreviewon']};
 function parseCSV(text){
   text=text.replace(/^﻿/,'');
   const first=text.split(/\r?\n/,1)[0]||'';
@@ -192,7 +199,7 @@ function checkImport(rows){
     if(existing&&format&&existing.format!==format&&codeHasQuotes(code))errors.push('The format cannot change after quotations exist for this part.');
     if(!errors.length&&format)formatOf.set(code,format);
     return {line,code,name,format:format||fmtRaw,supplier:sup?.id,supplierText:supRaw,existing:existing?.id||null,errors,
-      data:{family:get(r,'family'),rtp:get(r,'rtp'),drawing:get(r,'drawing'),qty,cadence,next:nd.value||null,children:kids&&!kids.error?kids.list:null},status:errors.length?'error':existing?'update':'new'};
+      data:{formulaSet:(()=>{const v=get(r,'formulaSet');if(!v)return null;const set=FORMULAS.sets.find(s=>s.id===v||s.name.toLowerCase()===v.toLowerCase());if(!set||!set.formats.includes(format||''))errors.push('Unknown formula set for this category.');return set?.id||null})(),family:get(r,'family'),rtp:get(r,'rtp'),drawing:get(r,'drawing'),qty,cadence,next:nd.value||null,children:kids&&!kids.error?kids.list:null},status:errors.length?'error':existing?'update':'new'};
   });
   return {rows:out};
 }
@@ -232,7 +239,7 @@ function confirmImport(){
     if(d.rtp)pair.rtp=d.rtp;if(d.qty!==null)pair.qty=d.qty;
     if(d.cadence!==null)pair.cadence=d.cadence;
     if(d.next)pair.next=d.next;else if((d.cadence!==null)&&!pair.next)pair.next=addMonths(pair.last||TODAY,pair.cadence);
-    for(const i of db.items.filter(i=>i.code===r.code)){i.name=r.name;i.format=r.format;if(d.family)i.family=d.family;if(d.drawing)i.drawing=d.drawing;if(d.children)i.children=structuredClone(d.children)}
+    for(const i of db.items.filter(i=>i.code===r.code)){i.name=r.name;i.format=r.format;if(d.family)i.family=d.family;if(d.formulaSet)i.formulaSet=d.formulaSet;if(d.drawing)i.drawing=d.drawing;if(d.children)i.children=structuredClone(d.children)}
   }
   const skipped=importRows.rows.length-good.length;
   audit(`Imported ${good.length} parts from file (${added} new, ${updated} updated)`);

@@ -1,7 +1,35 @@
 'use strict';
 /* Additive, versioned presentation fixtures. Never reset browser records or reinsert
  * examples after the user has completed/deleted them. IDs and links use the real model. */
+/* Version 2: one first-quotation part for every formula set in the system, so each sheet can be tried from the
+   “Create request for new items” list (Injection, Rubber, Steel, QT-ASSY, the standard set and the assembly model). */
+const FIRST_QUOTATION_DEMO=[
+  {set:'injection',supplier:'s1',format:'Single Part',code:'WP-NEW-INJ-001',name:'COVER, AIR/C — injection (first quotation)',rtp:'S001571-101-01',drawing:'M206-F-26',qty:25000,cadence:3,children:[]},
+  {set:'rubber',supplier:'s2',format:'Single Part',code:'WP-NEW-RUB-001',name:'TUBE, AIR CONN — rubber (first quotation)',rtp:'PRC0006-101-E20',drawing:'M206-F-26',qty:25000,cadence:3,children:[]},
+  {set:'steel',supplier:'s3',format:'Single Part',code:'WP-NEW-STL-001',name:'GUARD ASSY — steel with sub-parts (first quotation)',rtp:'LOU0002-101-J21',drawing:'M-19-F0461',qty:178474,cadence:3,children:[{code:'17211-KZL-9300-21',qty:1},{code:'17211-K16-9022',qty:1}]},
+  {set:'assembly-qt',supplier:'s1',format:'Assembly',code:'WP-NEW-ASY-001',name:'CASE ASSY, AIR/C — QT-ASSY (first quotation)',rtp:'FG03811-101-00',drawing:'04',qty:2492,cadence:1,children:[{code:'LOU0045-034-J21',qty:1},{code:'THS0058-067-J21',qty:5},{code:'GCT0144-020-D20',qty:1}]},
+  {set:'standard',supplier:'s2',format:'Single Part',code:'WP-NEW-STD-001',name:'HOLDER — standard paper form (first quotation)',rtp:'S005109-101-01',drawing:'—',qty:12000,cadence:3,children:[]},
+  {set:'standard',supplier:'s3',format:'Assembly',code:'WP-NEW-STD-002',name:'MODULE ASSY — standard formula (first quotation)',rtp:'LOU0002-102-J21',drawing:'05',qty:3000,cadence:1,children:[{code:'17211-KZL-9300-21',qty:2}]},
+  {set:'assembly',supplier:'s2',format:'Assembly',code:'WP-NEW-ASM-001',name:'DUCT ASSY — assembly pricing model (first quotation)',rtp:'PRC0006-102-E20',drawing:'02',qty:4000,cadence:1,children:[]}
+];
+function addFirstQuotationDemoParts(data){
+  const templates=seed();
+  for(const f of FIRST_QUOTATION_DEMO){
+    if(data.items.some(i=>i.code===f.code))continue;
+    const base=templates.items.find(i=>i.supplier===f.supplier)||templates.items[0],id='i'+(Math.max(0,...data.items.map(i=>Number(i.id.slice(1))||0))+1);
+    const item={...structuredClone(base),id,formulaSet:f.set,code:f.code,name:f.name,supplier:f.supplier,format:f.format,rtp:f.rtp,drawing:f.drawing,qty:f.qty,cadence:f.cadence,next:TODAY,children:structuredClone(f.children),demoScenario:'first-'+f.set};
+    delete item.price;delete item.last;delete item.family;
+    data.items.push(item);
+  }
+  data.demoDataVersion=2;
+  return data;
+}
 function populateDemoData(original){
+  const base=original.demoDataVersion>=1?original:populateBaseDemoData(original);
+  if(base.demoDataVersion>=2)return base;
+  return addFirstQuotationDemoParts(base===original?structuredClone(original):base);
+}
+function populateBaseDemoData(original){
   if(original.demoDataVersion>=1)return original;
   const data=structuredClone(original),templates=seed();
   for(const key of ['priceRequests','notifications','quotes','items','history','emails','audit'])data[key]||=[];
