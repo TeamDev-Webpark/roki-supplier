@@ -2,7 +2,7 @@
 /* "รายการกำหนดรอบทบทวนทั้งหมด": every part's review schedule in one register, with filters that suit the way it is used —
    who (Supplier), what (form category, formula set), how often (interval), when (next review window, quick presets),
    how it stands (not yet quoted / upcoming / due / in progress / no schedule) and how stale (last approved price).
-   Replaces the earlier "Active review schedules" page; loaded after operations-desk.js so it takes over activeScheduleView. */
+   Owns activeScheduleView; operations-desk.js supplies the shared request and schedule data. */
 const REG_KEY='schedule-active';
 const REG_ADVANCED_KEYS=['supplier','format','fset','cadence','range','price','stale'];
 const REG_STATES=[['new','First quotation needed','รอเสนอราคาครั้งแรก','gray'],['upcoming','Upcoming review','ยังไม่ถึงรอบ','green'],['due','Due · sent by the system','ถึงรอบแล้ว · ระบบกำลังส่ง','amber'],['processing','Request in progress','มีคำขอกำลังดำเนินการ','blue'],['none','No schedule','ไม่มีกำหนดการ','gray']];

@@ -4,8 +4,8 @@
    → remark and beginning date → Supplier and WEBPARK signature boxes.
    Everything that the formula library lets WEBPARK configure still comes from the template: title, header fields,
    section titles, printed columns, blank rows, signature boxes, notes and form code.
-   Loaded after workspace.js, so these definitions replace the earlier formColumn / printView everywhere
-   (quotation page, blank-form preview, reference-quotation dialog and the formula-library live preview). */
+   Shared by the quotation page, blank-form preview, reference-quotation dialog and formula-library live preview.
+   This module owns formColumn / printView; workspace startup waits for all page modules. */
 
 const qsLetterless=s=>sectionHeading(s).replace(/\s*\(\s*[A-Z]\s*\)\s*$/,'');
 const qsIsNumber=(s,key)=>key==='amount'||s.fields.find(f=>f[0]===key)?.[2]==='number';
