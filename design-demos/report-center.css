@@ -1,0 +1,54 @@
+.report-center {color:#172c44;min-width:0}
+.report-center .heading {margin-bottom:24px}
+.report-center button:focus-visible,.report-center a:focus-visible,.report-center .table-wrap:focus-visible {outline:2px solid #1764b6;outline-offset:3px}
+.report-tabs {display:flex;flex-wrap:wrap;gap:6px;padding:7px;background:#e9eff6;border-radius:12px}
+.report-tabs button {font:inherit;font-size:13px;font-weight:500;line-height:1.4;padding:10px 14px;border:0;border-radius:8px;color:#40566e;background:transparent;cursor:pointer}
+.report-tabs button:hover {background:#f6f9fd}
+.report-tabs button[aria-pressed=true] {background:#153759;color:white}
+.report-tools {display:flex;flex-wrap:wrap;align-items:center;gap:8px 18px;margin:12px 0 22px;color:#50657c;font-size:12px}
+.report-tools span {margin-right:auto}
+.report-filter-panel,.report-table-panel {border:1px solid #dce5ed;border-radius:12px;background:#fff;min-width:0}
+.report-filter-panel {padding:18px 20px}
+.report-filter-heading,.report-table-heading,.report-pagination,.report-pagination>div {display:flex;align-items:center;justify-content:space-between;gap:12px}
+.report-filter-heading {margin-bottom:14px}
+.report-filter-heading h2,.report-table-heading h2 {margin:0;font-size:16px}
+.report-fields {display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,168px),1fr));gap:12px}
+.report-fields label {display:grid;align-content:start;gap:6px;font-size:12px;color:#456079;min-width:0}
+.report-fields input,.report-fields select {width:100%;min-width:0;height:38px;border:1px solid #cdd9e6;border-radius:7px;background-color:#fff;color:#1b3450;padding:6px 9px;font:inherit;font-size:13px}
+.report-fields :is(input,select):focus {outline:2px solid #2473bd;outline-offset:1px}
+.report-invalid {margin:12px 0 0;color:#9d3129;font-size:13px}
+.report-metrics {display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,170px),1fr));gap:12px;margin:18px 0}
+.report-metrics>div {display:flex;flex-direction:column;gap:7px;padding:15px 18px;border:1px solid #dce5ed;border-radius:10px;background:#fff}
+.report-metrics>div:first-child {background:#142f4b;border-color:#142f4b;color:#fff}
+.report-metrics span {font-size:12px;color:#486178}
+.report-metrics>div:first-child span {color:#d7e7f5}
+.report-metrics strong {font-size:28px;line-height:1.2;font-variant-numeric:tabular-nums}
+.report-distribution {display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,275px),1fr));gap:8px 24px;margin:0 0 18px;padding:13px 18px;border:1px solid #dce5ed;border-radius:10px;background:#f8fafc}
+.report-distribution>div {display:grid;grid-template-columns:minmax(0,1.3fr) 1fr auto;align-items:center;gap:10px;color:#486178;font-size:11px}
+.report-distribution meter {width:100%;height:12px}
+.report-distribution meter::-webkit-meter-bar {background:#e1eaf3;border:0;border-radius:6px}
+.report-distribution meter::-webkit-meter-optimum-value {background:#3477ac;border-radius:6px}
+.report-table-heading {padding:17px 20px}
+.report-table-heading p,.report-empty p {margin:5px 0 0;color:#50657c;font-size:12px}
+.report-table-heading>span {white-space:nowrap;font-size:12px;color:#405d76}
+.report-table-panel .table-wrap {overflow-x:auto;border-top:1px solid #dce5ed}
+.report-data {width:100%;font-variant-numeric:tabular-nums}
+.report-data th {background:#eef4f9;color:#40566e}
+.report-data :is(th,td) {padding:11px 14px;white-space:nowrap}
+.report-data td:last-child {white-space:normal;min-width:130px;max-width:350px;overflow-wrap:anywhere}
+.report-data tbody tr:nth-child(even) {background:#f8fafc}
+.report-data tbody tr:hover {background:#edf5ff}
+.report-data a {color:#0d559d;font-weight:600}
+.report-number{text-align:right}
+.report-status {display:inline-block;padding:3px 8px;background:#e8f0f8;border-radius:12px;color:#254d76;font-size:11px}
+.report-pagination {padding:12px 18px;font-size:12px;color:#486178}
+.report-empty {padding:40px 16px;text-align:center;border-top:1px solid #dce5ed}
+@media (max-width:600px){
+ .report-tabs {flex-wrap:nowrap;overflow:auto}
+ .report-tabs button {flex:none}
+ .report-filter-panel {padding:14px}
+ .report-metrics {grid-template-columns:repeat(2,minmax(0,1fr))}
+ .report-metrics strong {font-size:23px}
+ .report-table-heading {align-items:flex-start}
+ .report-pagination {flex-wrap:wrap}
+}

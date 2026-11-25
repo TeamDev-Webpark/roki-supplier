@@ -1,13 +1,14 @@
 'use strict';
 /* Additive, versioned presentation fixtures. Never reset browser records or reinsert
  * examples after the user has completed/deleted them. IDs and links use the real model. */
-/* Version 2: one first-quotation part for every formula set in the system, so each sheet can be tried from the
+/* Version 3 (re-run safe: parts are added by code): one first-quotation part for every formula set in the system, so each sheet can be tried from the
    “Create request for new items” list (Injection, Rubber, Steel, QT-ASSY, the standard set and the assembly model). */
 const FIRST_QUOTATION_DEMO=[
   {set:'injection',supplier:'s1',format:'Single Part',code:'WP-NEW-INJ-001',name:'COVER, AIR/C — injection (first quotation)',rtp:'S001571-101-01',drawing:'M206-F-26',qty:25000,cadence:3,children:[]},
   {set:'rubber',supplier:'s2',format:'Single Part',code:'WP-NEW-RUB-001',name:'TUBE, AIR CONN — rubber (first quotation)',rtp:'PRC0006-101-E20',drawing:'M206-F-26',qty:25000,cadence:3,children:[]},
   {set:'steel',supplier:'s3',format:'Single Part',code:'WP-NEW-STL-001',name:'GUARD ASSY — steel with sub-parts (first quotation)',rtp:'LOU0002-101-J21',drawing:'M-19-F0461',qty:178474,cadence:3,children:[{code:'17211-KZL-9300-21',qty:1},{code:'17211-K16-9022',qty:1}]},
   {set:'assembly-qt',supplier:'s1',format:'Assembly',code:'WP-NEW-ASY-001',name:'CASE ASSY, AIR/C — QT-ASSY (first quotation)',rtp:'FG03811-101-00',drawing:'04',qty:2492,cadence:1,children:[{code:'LOU0045-034-J21',qty:1},{code:'THS0058-067-J21',qty:5},{code:'GCT0144-020-D20',qty:1}]},
+  {set:'unit-part-paper',supplier:'s3',format:'Single Part',code:'WP-NEW-PPR-001',name:'GUARD ELEMENT — paper Unit Part form (first quotation)',rtp:'LOU0055-034-J21',drawing:'M-19-F0461',qty:178474,cadence:3,children:[{code:'17211-KZL-9300-21',qty:1},{code:'17211-K16-9022',qty:1}]},
   {set:'standard',supplier:'s2',format:'Single Part',code:'WP-NEW-STD-001',name:'HOLDER — standard paper form (first quotation)',rtp:'S005109-101-01',drawing:'—',qty:12000,cadence:3,children:[]},
   {set:'standard',supplier:'s3',format:'Assembly',code:'WP-NEW-STD-002',name:'MODULE ASSY — standard formula (first quotation)',rtp:'LOU0002-102-J21',drawing:'05',qty:3000,cadence:1,children:[{code:'17211-KZL-9300-21',qty:2}]},
   {set:'assembly',supplier:'s2',format:'Assembly',code:'WP-NEW-ASM-001',name:'DUCT ASSY — assembly pricing model (first quotation)',rtp:'PRC0006-102-E20',drawing:'02',qty:4000,cadence:1,children:[]}
@@ -17,22 +18,55 @@ function addFirstQuotationDemoParts(data){
   for(const f of FIRST_QUOTATION_DEMO){
     if(data.items.some(i=>i.code===f.code))continue;
     const base=templates.items.find(i=>i.supplier===f.supplier)||templates.items[0],id='i'+(Math.max(0,...data.items.map(i=>Number(i.id.slice(1))||0))+1);
-    const item={...structuredClone(base),id,formulaSet:f.set,code:f.code,name:f.name,supplier:f.supplier,format:f.format,rtp:f.rtp,drawing:f.drawing,qty:f.qty,cadence:f.cadence,next:TODAY,children:structuredClone(f.children),demoScenario:'first-'+f.set};
+    const item={...structuredClone(base),id,formulaSet:f.set,code:f.code,name:f.name,supplier:f.supplier,format:f.format,rtp:f.rtp,drawing:f.drawing,qty:f.qty,cadence:f.cadence,next:null,children:structuredClone(f.children),demoScenario:'first-'+f.set};
     delete item.price;delete item.last;delete item.family;
     data.items.push(item);
   }
-  data.demoDataVersion=2;
+  data.demoDataVersion=3;
   return data;
+}
+/* five-step flow: quotations the Supplier approved wait for WEBPARK Issue before Check. Move a few seeded ones back to that step. */
+function addIssueQueueDemo(data){
+  const waiting=data.quotes.filter(q=>q.status==='ROKI Check'&&q.trail.at(-1)?.stage==='S-Approve');
+  for(const q of waiting.slice(-3)){q.status='ROKI Issue';q.trail.push({action:'Waiting for WEBPARK Issue',user:'System',at:timestamp()})}
+  data.demoDataVersion=4;return data;
+}
+/* Version 5: every work queue keeps enough sample work to demonstrate the five-step flow. Runs once per browser
+   record and only fills what is short, so a store that still has work is left as it is. */
+function topUpQueueDemo(data){
+  for(const key of ['priceRequests','notifications','quotes','items','history','emails','audit'])data[key]||=[];
+  const ctx=demoContext(data,seed()),{day,request,dispatch,newItem,quoteFor}=ctx;
+  let n=60;
+  const make=(supplier,status,offset)=>{
+    let code;do{n++;code=`${supplier==='s1'?'17230':supplier==='s2'?'17253':'17211'}-WP${String(n).padStart(2,'0')}-9000`}while(data.items.some(i=>i.code===code));
+    const item=newItem(supplier,n,'queue-'+status);item.code=code;item.next=day(TODAY,60+n);
+    const approved=quoteFor(item,'Approved','2026-07-20',null);
+    if(status==='Waiting'){
+      const r=request([item.id],'Approved',day(TODAY,-9),`${new Date(TODAY+'T12:00:00Z').toLocaleString('en-GB',{month:'long',timeZone:'UTC'})} review - ${item.code}`,'queue-waiting-request');
+      r.due=day(TODAY,10+offset);dispatch(r,supplier,[item.id],day(TODAY,-5));
+    }else quoteFor(item,status,day(TODAY,-(3+offset)),approved);
+  };
+  const count=(status,supplier)=>data.quotes.filter(q=>q.status===status&&(!supplier||q.supplier===supplier)).length;
+  const waiting=supplier=>data.notifications.filter(x=>x.supplier===supplier&&x.items.some(id=>!data.quotes.some(q=>q.item===id&&q.requestedBy===x.priceRequestId))).length;
+  for(const s of suppliers.map(x=>x.id)){
+    for(let k=waiting(s);k<2;k++)make(s,'Waiting',k*4);
+    for(let k=count('Reverted',s);k<1;k++)make(s,'Reverted',1);
+    for(let k=count('Draft',s);k<1;k++)make(s,'Draft',0);
+    for(let k=count('Supplier approval',s);k<2;k++)make(s,'Supplier approval',k);
+  }
+  for(const status of ['ROKI Issue','ROKI Check','ROKI Approve'])
+    for(let k=count(status);k<3;k++)make(suppliers[k%3].id,status,k);
+  data.demoDataVersion=5;return data;
 }
 function populateDemoData(original){
   const base=original.demoDataVersion>=1?original:populateBaseDemoData(original);
-  if(base.demoDataVersion>=2)return base;
-  return addFirstQuotationDemoParts(base===original?structuredClone(original):base);
+  if(base.demoDataVersion>=5)return base;
+  let data=base===original?structuredClone(original):base;
+  if(!(data.demoDataVersion>=3))data=addFirstQuotationDemoParts(data);
+  if(!(data.demoDataVersion>=4))data=addIssueQueueDemo(data);
+  return topUpQueueDemo(data);
 }
-function populateBaseDemoData(original){
-  if(original.demoDataVersion>=1)return original;
-  const data=structuredClone(original),templates=seed();
-  for(const key of ['priceRequests','notifications','quotes','items','history','emails','audit'])data[key]||=[];
+function demoContext(data,templates){
   const clone=v=>structuredClone(v);
   const day=(iso,offset)=>{const d=new Date(iso+'T12:00:00Z');d.setUTCDate(d.getUTCDate()+offset);return d.toISOString().slice(0,10)};
   const stamp=(iso,h=9)=>`${date(iso)}, ${String(h).padStart(2,'0')}:15 ICT`;
@@ -91,11 +125,6 @@ function populateBaseDemoData(original){
       mail('M-DEMO-'+q.id,recipients,`${q.id} - ${q.status}`,`${it.code} ${it.name}: THB ${cash(q.total)} per piece. ${q.remark}`,q.trail.at(-1)?.at||stamp(q.quoteDate),q.trail.at(-1)?.user||actor('Issue',q.supplier).name,q.id);
     }
   }
-  // Complete the provenance of the supplied sample quotations, without changing their prices/statuses.
-  for(const template of templates.quotes){const q=data.quotes.find(q=>q.id===template.id);if(q)linkQuote(q)}
-  for(const n of [...data.notifications])if(n.id==='N-DEMO-001'&&!n.priceRequestId){
-    const r=request(n.items,'Approved','2026-11-10','Quarterly HOLDER material review','holder-waiting');r.due=n.due;dispatch(r,n.supplier,n.items,'2026-11-17',n);
-  }
   const source=supplier=>templates.quotes.find(q=>q.supplier===supplier&&q.status==='Approved');
   function newItem(supplier,index,scenario){
     const base=templates.items.find(i=>i.id===source(supplier).item),id='i'+(Math.max(0,...data.items.map(i=>Number(i.id.slice(1))||0))+1);
@@ -117,6 +146,18 @@ function populateBaseDemoData(original){
     data.quotes.push(q);linkQuote(q);
     if(status==='Approved'){data.history.push({item:item.id,effective:q.effective,price:q.total,quote:q.id,reason:q.remark});item.price=q.total;item.last=day(iso,4)}
     return q;
+  }
+  return {clone,day,stamp,actor,next,event,request,dispatch,linkQuote,source,newItem,quoteFor};
+}
+function populateBaseDemoData(original){
+  if(original.demoDataVersion>=1)return original;
+  const data=structuredClone(original),templates=seed();
+  for(const key of ['priceRequests','notifications','quotes','items','history','emails','audit'])data[key]||=[];
+  const {clone,day,stamp,actor,next,request,dispatch,linkQuote,source,newItem,quoteFor}=demoContext(data,templates);
+  // Complete the provenance of the supplied sample quotations, without changing their prices/statuses.
+  for(const template of templates.quotes){const q=data.quotes.find(q=>q.id===template.id);if(q)linkQuote(q)}
+  for(const n of [...data.notifications])if(n.id==='N-DEMO-001'&&!n.priceRequestId){
+    const r=request(n.items,'Approved','2026-11-10','Quarterly HOLDER material review','holder-waiting');r.due=n.due;dispatch(r,n.supplier,n.items,'2026-11-17',n);
   }
   // Each supplier has usable work at every quotation stage, plus a valid approved baseline.
   for(const supplier of suppliers){

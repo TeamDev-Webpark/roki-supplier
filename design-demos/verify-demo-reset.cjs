@@ -1,9 +1,9 @@
 'use strict';
 const {run,login,assert}=require('./_env.cjs');
 run('reset initial demo data while preserving account and language',async({base,context,shot})=>{
- const p=await context.newPage();await login(p,base,'roki','r-issue','schedule');await p.evaluate(()=>I18N.set('th'));
- const initial=await p.evaluate(()=>({due:deskDueParts().map(i=>i.id).sort(),notifications:db.notifications.length,requests:db.priceRequests.length,items:db.items.length,versions:db.formulas.versions.length,user:user.id,lang:I18N.lang()}));
- const id=await p.evaluate(()=>db.items.find(i=>i.demoScenario==='direct-3').id);
+ const p=await context.newPage();await login(p,base,'roki','r-issue','request-new');await p.evaluate(()=>I18N.set('th'));
+ const initial=await p.evaluate(()=>({due:deskNewParts().map(i=>i.id).sort(),notifications:db.notifications.length,requests:db.priceRequests.length,items:db.items.length,versions:db.formulas.versions.length,user:user.id,lang:I18N.lang()}));
+ const id=await p.evaluate(()=>deskNewParts()[0].id);
  await p.locator(`[data-single-request="${id}"]`).click();await p.locator('#rfq-purpose').fill('Test the review workflow before restoring the initial sample data.');await p.locator('[data-action="rfq-save-submit"]').click();await p.locator('[data-quotation-history]').first().waitFor();
  assert.equal(await p.evaluate(id=>deskDueParts().some(i=>i.id===id),id),false);
  await p.evaluate(()=>localStorage.setItem('unrelated-demo-reset-test','keep'));
@@ -11,8 +11,8 @@ run('reset initial demo data while preserving account and language',async({base,
  const count=await p.evaluate(()=>db.notifications.length);
  await p.locator('.top-actions [data-action="reset-demo"]').click();await p.locator('[data-action="close"]').first().click();assert.equal(await p.evaluate(()=>db.notifications.length),count,'Cancel retains trial records');
  await p.locator('[data-action="reset-demo"]').click();await p.locator('[data-action="confirm-reset-demo"]').click();assert.equal(await p.locator('#confirm-reset-demo').count(),1);assert.equal(await p.evaluate(()=>db.notifications.length),count,'Reset requires confirmation');
- await p.locator('#confirm-reset-demo').check();await p.locator('[data-action="confirm-reset-demo"]').click();await p.waitForURL('**/roki.html#schedule');await p.waitForFunction(id=>typeof deskDueParts==='function'&&deskDueParts().some(i=>i.id===id),id);
- const restored=await p.evaluate(()=>({due:deskDueParts().map(i=>i.id).sort(),notifications:db.notifications.length,requests:db.priceRequests.length,items:db.items.length,versions:db.formulas.versions.length,user:user.id,lang:I18N.lang()}));assert.deepEqual(restored,initial);
+ await p.locator('#confirm-reset-demo').check();await p.locator('[data-action="confirm-reset-demo"]').click();await p.waitForURL('**/roki.html#schedule');await p.waitForFunction(id=>typeof deskNewParts==='function'&&deskNewParts().some(i=>i.id===id),id);
+ const restored=await p.evaluate(()=>({due:deskNewParts().map(i=>i.id).sort(),notifications:db.notifications.length,requests:db.priceRequests.length,items:db.items.length,versions:db.formulas.versions.length,user:user.id,lang:I18N.lang()}));assert.deepEqual(restored,initial);
  assert.equal(await p.evaluate(()=>localStorage.getItem('unrelated-demo-reset-test')),'keep');
  await supplier.waitForFunction(count=>typeof db!=='undefined'&&db.notifications.length===count,initial.notifications);assert.equal(await supplier.evaluate(()=>user.id),'s1-issue');assert.equal(await supplier.locator('[data-action="reset-demo"]').count(),1);
  await shot(p,'webpark-reset-demo-button-th.png',{fullPage:false});await p.setViewportSize({width:390,height:844});assert.equal(await p.evaluate(()=>document.documentElement.scrollWidth>innerWidth+1),false,'Reset button does not overflow mobile');

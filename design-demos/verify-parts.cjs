@@ -44,12 +44,12 @@ run('verify-parts',async({base,context})=>{
 
   /* create a part with a second supplier, scheduled, with components */
   await roki.locator('#pf-code').fill('17999-NEW-0001');await roki.locator('#pf-name').fill('NEW BRACKET');await roki.locator('#pf-format').selectOption('Assembly');await roki.locator('#pf-supplier').selectOption('s2');
-  await roki.locator('#pf-qty').fill('12000');await roki.locator('#pf-cadence').selectOption('1');await roki.locator('#pf-next').fill('2026-12-15');
+  await roki.locator('#pf-qty').fill('12000');assert.equal(await roki.locator('#pf-cadence, #pf-next, #pf-sched').count(),0,'Schedule fields are set on the first review cycle page');
   await roki.locator('#pf-children').fill('17230-KWN-9000, 2\n17999-PURCHASED, 1');
   await roki.locator('[data-action="save-part"]').click();
   await roki.locator('.dialog').waitFor({state:'detached'});
   let data=await store(roki);const created=data.items.find(i=>i.code==='17999-NEW-0001');
-  assert(created&&created.supplier==='s2'&&created.next==='2026-12-15'&&created.cadence===1&&created.price==null);
+  assert(created&&created.supplier==='s2'&&created.next==null&&created.cadence===3&&created.price==null);
   assert.deepEqual(created.children,[{code:'17230-KWN-9000',qty:2},{code:'17999-PURCHASED',qty:1}]);
   assert.equal(await notifications(),n0,'Creating a part never notifies');
 

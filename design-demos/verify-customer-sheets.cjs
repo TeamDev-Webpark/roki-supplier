@@ -9,7 +9,7 @@
 const fs=require('node:fs'),vm=require('node:vm'),path=require('node:path'),assert=require('node:assert/strict');
 const users=['s1','s2','s3'].flatMap(id=>['Issue','Approve'].map(role=>({id:id+'-'+role,name:id+' '+role,role,portal:'supplier',supplier:id}))).concat(['Issue','Check','Approve'].map(role=>({id:'r-'+role,name:'ROKI '+role,role,portal:'roki'})));
 const ctx=vm.createContext({console,Math,structuredClone,crypto:{randomUUID:()=>'00000000-0000'},date:s=>s,timestamp:()=>'now',users});
-const M=vm.runInContext(fs.readFileSync(path.join(__dirname,'quote-model.js'),'utf8')+'\n;({totals,blankCosts,adaptCosts,sectionsOf,cfgOf,cfgIn,expenseOf,rowAmount,defaultFormulaStore,setFormulaStore,validateFormatConfig,validateCosts,currentFormulas,fmtCfg,compileExpr,seed,FORMULAS:()=>FORMULAS})',ctx);
+const M=vm.runInContext(fs.readFileSync(path.join(__dirname,'quote-model.js'),'utf8')+'\n'+fs.readFileSync(path.join(__dirname,'formula-examples.js'),'utf8')+'\n;({ensureFormulaExamples,runFormulaExamples,customerExamples,CUSTOMER_SETS,EX_KEYS,totals,blankCosts,adaptCosts,sectionsOf,cfgOf,cfgIn,expenseOf,rowAmount,defaultFormulaStore,setFormulaStore,validateFormatConfig,validateCosts,currentFormulas,fmtCfg,compileExpr,seed,FORMULAS:()=>FORMULAS})',ctx);
 const {totals}=M;
 const V=setId=>M.FORMULAS().versions.find(v=>v.setId===setId);
 const blankCosts=kind=>kind==='Assembly'?M.blankCosts('Assembly',V('assembly-qt')):M.blankCosts('Single Part',V(kind.toLowerCase()));
@@ -114,4 +114,17 @@ for(const v of M.defaultFormulaStore().versions)for(const [key,cfg] of Object.en
 /* old quotations carry over to a new profile without losing their numbers */
 {const old=seed.quotes.find(x=>x.id==='Q-2026-0011').costs;const moved=M.adaptCosts(old,'Single Part',V('injection'));assert.equal(moved.material[0].loss,3,'section-level loss becomes the line loss');assert.equal(moved.fv,V('injection').version);assert(Number.isFinite(totals(moved).total))}
 {const old=seed.quotes.find(x=>x.id==='Q-2026-0015').costs;const moved=M.adaptCosts(old,'Assembly',V('assembly-qt'));assert.equal(moved.investment[0].newInv,12000,'amount becomes New investment');near(totals(moved).total,totals(old).total,'Assembly quotation re-entered under the new columns',1e-9)}
+/* the examples stored with each formula set (what the formula library shows and re-runs on every save) */
+{
+  const store=M.ensureFormulaExamples(M.defaultFormulaStore());let n=0;
+  for(const set of store.sets){
+    const ver=store.versions.find(v=>v.version===set.current);
+    for(const r of M.runFormulaExamples(M.cfgIn(ver,set.formats[0]),set.examples)){n++;assert(r.pass,`${set.id} · ${r.ex.name}: `+JSON.stringify(r.diffs))}
+  }
+  assert(n>=16,'Customer examples are stored: '+n);
+  assert.equal(store.sets.find(s=>s.id==='steel').examples.length,6);assert.equal(store.sets.find(s=>s.id==='assembly-qt').examples.length,2);assert.equal(store.sets.find(s=>s.id==='unit-part-paper').examples.length,4);
+  /* a formula that no longer reproduces the customer form is caught */
+  const ver=store.versions.find(v=>v.setId==='injection'),cfg=JSON.parse(JSON.stringify(M.cfgIn(ver,'Single Part')));cfg.sections[2].expr='rate*time/cavity*1.1';
+  assert(M.runFormulaExamples(cfg,store.sets.find(s=>s.id==='injection').examples).some(r=>!r.pass),'A changed formula fails the examples');
+}
 console.log('PASS verify-customer-sheets');

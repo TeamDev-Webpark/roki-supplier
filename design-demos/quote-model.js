@@ -147,26 +147,112 @@ function customerSheetFormats(){
   return {injection:sheet('Injection'),rubber:sheet('Rubber'),steel:sheet('Steel'),'assembly-qt':asm};
 }
 /* Sets: the two built-in ones (as before) plus one per customer sheet. Every version carries both formats so editors never meet a gap. */
+/* ---------- form template: what the printed / filled quotation form looks like ----------
+   Per format of a formula version: title, form code, header fields, cost titles, section headings and printed columns,
+   blank grid lines, notes and signature boxes. Without a template the form is drawn the way it always was. */
+const HEADER_FIELDS=[['date','Date'],['partNo','Part No.'],['rev','Rev. No.'],['qty','Qty'],['rtp','RTP Code'],['partName','Part Name'],['supplierRef','Quotation No.'],['ending','Ending']];
+const SIGN_STAGES=[['S-Issue','Supplier · Issue'],['S-Approve','Supplier · Approve'],['R-Issue','ROKI · Issue'],['R-Check','ROKI · Check'],['R-Approve','ROKI · Approve'],['','Blank line (no stage)']];
+function defaultTemplate(format){
+  return {title:format==='Assembly'?'QUOTATION ( Assembly )':'QUOTATION ( Unit Part )',formCode:'',
+    costTitle:{original:'Cost Original',revise:'Cost Revise {ordinal}'},
+    header:HEADER_FIELDS.map(([key,label])=>({key,label,show:!['supplierRef','ending'].includes(key)})),
+    notes:[],blankRows:0,
+    sign:{supplier:[{label:'Approved by',stage:'S-Approve'},{label:'Issued by',stage:'S-Issue'}],roki:[{label:'Approved by',stage:'R-Approve'},{label:'Checked by',stage:'R-Check'},{label:'Issued by',stage:'R-Issue'}]}};
+}
+const templateOf=(cfg,format)=>{const d=defaultTemplate(format),t=cfg.template||{};return {...d,...t,costTitle:{...d.costTitle,...(t.costTitle||{})},header:t.header||d.header,sign:t.sign||d.sign,notes:t.notes||d.notes}};
+const sectionHeading=s=>s.title||`${s.label} breakdown (${s.letter})`;
+const sectionPrintCols=s=>s.printCols&&s.printCols.length?s.printCols:[...s.fields.map(f=>[f[0],f[1].replace(/ · .*/,'')]),['amount','Amount']];
+const ordinalOf=n=>n===1?'1st':n===2?'2nd':n===3?'3rd':n+'th';
+const costTitleOf=(tpl,revision)=>revision?String(tpl.costTitle.revise).replace('{ordinal}',ordinalOf(revision)).replace('{n}',revision):tpl.costTitle.original;
+
+/* The customer's own layouts. Section titles and column headers follow the sample documents. */
+const CUSTOMER_LAYOUTS={
+  sheet:{
+    template:{title:'QUOTATION ( Unit Part )',formCode:'',notes:['Remark : ( If you have revised quotation please cause fill down only. )'],blankRows:6,
+      sign:{supplier:[{label:'Approved by',stage:'S-Approve'},{label:'Checked by',stage:''},{label:'Issued by',stage:'S-Issue'}],roki:[{label:'Approved by',stage:'R-Approve'},{label:'Checked by',stage:'R-Check'},{label:'Issued by',stage:'R-Issue'}]}},
+    sections:{
+      material:{title:'Zone Material Breakdown (A)',printCols:[['code','Material Code'],['name','Material Name'],['weight','Part Weight (kg)'],['scrap','Scrap Weight (kg)'],['rate','Cost/kg'],['origin','Imp / Loc'],['loss','Loss %'],['amount','COST']]},
+      components:{title:'Component Part Breakdown (B)',printCols:[['partNo','Part No'],['name','Part Name'],['origin','Import / Local / Supply'],['qty','Qty'],['rate','Price'],['loss','Loss %'],['amount','Amount']]},
+      process:{title:'Process Cost Breakdown ( C )',printCols:[['name','Process'],['machine','M/C'],['cavity','Cavity'],['time','Time (Sec)'],['rate','Charge (THB/Sec)'],['amount','Cost']]},
+      packing:{title:'Packing & Transport Cost Breakdown ( D )',printCols:[['name','Type'],['amount','Cost'],['perPiece','Used per piece'],['qty','Qty'],['pm','Maintenance %'],['amount','Baht']]},
+      equipment:{title:'Equipment Cost Breakdown ( E )',printCols:[['name','Dies & Jig'],['origin','Imp / Loc'],['invType','Investment'],['cavity','Cavity'],['amount','Dies & Jig Cost'],['volume','Vol.'],['repaid','Repayment'],['pm','Interest %'],['amount','Cost/Pcs']]}
+    }},
+  assy:{
+    template:{title:'QUOTATION ( Unit Part )',formCode:'',costTitle:{original:'Cost Original',revise:'Cost Rev.{n}'},blankRows:2,
+      header:HEADER_FIELDS.map(([key,label])=>({key,label:key==='supplierRef'?'No.':key==='qty'?'Qty/M':label,show:!['ending'].includes(key)||true})),
+      notes:['1. Management 0.5 % (ค่าบริหารจัดการเพิ่มเติมกับ Component Part)','2. ระยะเวลาการคำนวณค่าเสื่อมราคาของ Investment Cost ที่เป็นเครื่องจักรแม่พิมพ์ ใช้ฐานคำนวณระยะเวลา 10 ปี','3. Investment Cost เป็น ราคาที่ Roki ซื้อให้ แต่ถ้า Supplier หาได้ถูกกว่า ให้ Supplier หาเอง','4. Payment Term : Credit 60 Days','5. MN Cost Rack 5% เริ่มคิดตั้งแต่ปีที่ 2'],
+      sign:{supplier:[{label:'Approved by',stage:'S-Approve'},{label:'Issued by',stage:'S-Issue'}],roki:[{label:'Approved by',stage:'R-Approve'},{label:'Checked by',stage:'R-Check'},{label:'Issued by',stage:'R-Issue'}]}},
+    sections:{
+      components:{title:'Component Part Breakdown (A)',printCols:[['partNo','Part Number'],['name','Part Name'],['origin','Imp / Loc'],['rate','@/Pcs'],['qty','Qty'],['amount','Price']]},
+      material:{title:'Material Breakdown (B)  (Material weight refer BOM ROKI)',printCols:[['name','Material'],['origin','Imp / Loc'],['weight','Input weight (kg)'],['runner','Runner wt (kg)'],['rate','@/Kg (THB/Kg)'],['lossApplies','Loss'],['amount','Expense']]},
+      process:{title:'Process Breakdown © + Charge Cost',printCols:[['name','Process'],['machine','M/C'],['cavity','CAV.'],['rate','Cost / CT'],['time','CT (Sec/Pcs)'],['amount','Expense']]},
+      investment:{title:'Investment Cost Breakdown (D)',printCols:[['name','Mold • Dies • Jig'],['origin','Imp / Loc / Supply'],['common','Common'],['newInv','New Inv'],['volume','Pro.Volume'],['repaid','Repayment'],['pm','Maintenance %'],['pmBase','Base / Pc'],['amount','Expense']]},
+      packing:{title:'Packing & Transport Cost Breakdown (E)',printCols:[['name','Type'],['amount','Cost'],['perPiece','Used per piece'],['qty','Qty'],['pm','MN %'],['amount','Expense']]}
+    }},
+  paper:{
+    template:{title:'QUOTATION ( Unit Part )',formCode:'APQ1.0.2 Rev.No:6 Date 1/04/2014 · Retention : N/A',notes:['Remark : ( If you have revised quotation please cause fill down only. )'],blankRows:8,
+      sign:{supplier:[{label:'Approved by',stage:'S-Approve'},{label:'Issued by',stage:'S-Issue'}],roki:[{label:'Approved by',stage:'R-Approve'},{label:'Checked by',stage:'R-Check'},{label:'Issued by',stage:'R-Issue'}]}},
+    sections:{
+      material:{title:'Zone Material Breakdown (A)',printCols:[['name','Material Type'],['origin','Imp / Loc'],['weight','Weight'],['wunit','Unit'],['scrap','Scrap Weight'],['rate','Material Cost'],['amount','Amount']]},
+      components:{title:'Component Part Breakdown (B)',printCols:[['name','Part Name'],['partNo','Part No.'],['origin','Import / Local / Supply'],['qty','Qty'],['amount','Price']]},
+      process:{title:'Process Cost Breakdown ( C )',printCols:[['name','Process'],['machine','M/C'],['cavity','Cavity'],['time','Time'],['rate','Charge'],['fixed','Direct cost'],['amount','Cost']]},
+      packing:{title:'Packing & Transport Cost Breakdown ( D )',printCols:[['name','Type'],['amount','Cost'],['qty','Qty'],['amount','Baht']]},
+      equipment:{title:'Equipment Cost Breakdown ( E )',printCols:[['name','Dies & Jig'],['origin','Imp / Loc'],['amount','Die or Mold'],['cavity','Cavity'],['volume','Vol.'],['amount','Repayment']]}
+    }}
+};
+function applyLayout(cfg,kind){
+  const L=CUSTOMER_LAYOUTS[kind];if(!L)return cfg;
+  cfg.template=JSON.parse(JSON.stringify(L.template));
+  for(const s of cfg.sections){const sec=L.sections[s.key];if(sec){s.title=sec.title;s.printCols=JSON.parse(JSON.stringify(sec.printCols))}}
+  return cfg;
+}
+/* the paper Unit Part form (QT-COMPONENT.pdf, PART STEEL.pdf): weight in g or kg per line (PART STEEL enters kg under a "g" heading),
+   process lines that carry only a cost, repayment, profit on the subtotal */
+function paperUnitPartFormat(){
+  const cfg=JSON.parse(JSON.stringify(defaultFormats()['Single Part']));
+  const mat=cfg.sections.find(s=>s.key==='material'),proc=cfg.sections.find(s=>s.key==='process');
+  mat.fields.splice(3,0,CH('wunit','Weight unit',['kg','g'],'kg'));
+  mat.expr='(weight+scrap)*if(wunit>0,0.001,1)*rate';
+  for(const a of mat.adj)a.percent=0;
+  proc.fields.push(fld('fixed','Direct cost · THB','number',null,{def:0}));
+  proc.expr='if(fixed>0,fixed,rate*time/cavity)';
+  cfg.profit={percent:15,base:'subtotal',bases:['process','subtotal'],lock:true};cfg.spare={percent:0,base:'process',lock:true};
+  cfg.rounding={decimals:2,row:'none',section:'round',profit:'truncate',spare:'truncate',total:'round'};
+  return applyLayout(cfg,'paper');
+}
 const CUSTOMER_SETS=[
-  {id:'injection',name:'Injection · ตัวอย่าง QT (Excel)',format:'Single Part',note:'Sheet “single part -Inj”: PM 5% of the process cost (C), loss 3% per line, no rounding between steps.'},
-  {id:'rubber',name:'Rubber · ตัวอย่าง QT (Excel)',format:'Single Part',note:'Sheet “single part -rubber”: interest 5% of each die’s cost per piece, loss 3% per line.'},
-  {id:'steel',name:'Steel · ตัวอย่าง QT (Excel)',format:'Single Part',note:'Sheets “steel-com / sub part”: interest on each die, sub-part prices linked into the parent, repaid tools keep their interest.'},
-  {id:'assembly-qt',name:'ชุดประกอบ · QT-ASSY (กระดาษ)',format:'Assembly',note:'QT-ASSY.pdf: lines rounded to 2 decimals, Common / New investment, repayment, maintenance per line.'}
+  {id:'injection',name:'Injection',format:'Single Part',layout:'sheet',note:'Sheet “single part -Inj”: PM 5% of the process cost (C), loss 3% per line, no rounding between steps.'},
+  {id:'rubber',name:'Rubber',format:'Single Part',layout:'sheet',note:'Sheet “single part -rubber”: interest 5% of each die’s cost per piece, loss 3% per line.'},
+  {id:'steel',name:'Steel',format:'Single Part',layout:'sheet',note:'Sheets “steel-com / sub part”: interest on each die, sub-part prices linked into the parent, repaid tools keep their interest.'},
+  {id:'assembly-qt',name:'Assembly · ชุดประกอบ',format:'Assembly',layout:'assy',note:'QT-ASSY.pdf: lines rounded to 2 decimals, Common / New investment, repayment, maintenance per line.'},
+  {id:'unit-part-paper',name:'Unit Part',format:'Single Part',layout:'paper',note:'QT-COMPONENT.pdf and PART STEEL.pdf: weight in g or kg, process lines with a direct cost, repayment, profit on the subtotal.'}
 ];
+const customerFormat=c=>c.layout==='paper'?paperUnitPartFormat():applyLayout(customerSheetFormats()[c.id],c.layout);
+/* Sets: the two built-in ones (as before) plus one per customer sheet. Every version carries both formats so editors never meet a gap. */
 function defaultFormulaStore(){
-  const base=defaultFormats(),sheets=customerSheetFormats(),clone=o=>JSON.parse(JSON.stringify(o));
+  const base=defaultFormats(),clone=o=>JSON.parse(JSON.stringify(o));
   const assembly=clone(base);assembly.Assembly.profit.percent=8;
   const versions=[
     {version:1,setId:'standard',effective:'2026-01-01',by:'System',at:'01 Jan 2026',reason:'Initial formulas taken from ROKI’s quotation sheets.',changes:[],formats:base},
     {version:2,setId:'assembly',effective:'2026-01-01',by:'WEBPARK',at:'01 Jan 2026',reason:'Separate assembly pricing model',changes:[],formats:assembly}
   ];
   const sets=[{id:'standard',name:'สูตรมาตรฐานชิ้นส่วน',formats:['Single Part','Assembly'],current:1},{id:'assembly',name:'สูตรชุดประกอบ',formats:['Assembly'],current:2}];
-  CUSTOMER_SETS.forEach((c,k)=>{
-    const formats=clone(base);formats[c.format]=clone(sheets[c.id]);
-    versions.push({version:3+k,setId:c.id,effective:'2026-01-01',by:'System',at:'01 Jan 2026',reason:c.note,changes:[],formats});
-    sets.push({id:c.id,name:c.name,formats:[c.format],current:3+k});
-  });
-  return {current:1,sets,versions};
+  const store={current:1,sets,versions};
+  ensureCustomerSets(store);
+  return store;
+}
+/* add the customer sets a stored library does not have yet (also used on data saved before they existed) */
+function ensureCustomerSets(store){
+  const clone=o=>JSON.parse(JSON.stringify(o));
+  for(const c of CUSTOMER_SETS){
+    const have=store.sets.find(s=>s.id===c.id);
+    if(have){if(/ตัวอย่าง QT|QT-COMPONENT|QT-ASSY \(/.test(have.name))have.name=c.name;continue}
+    const version=Math.max(0,...store.versions.map(v=>v.version))+1,base=store.versions[0]?clone(store.versions[0].formats):defaultFormats();
+    base[c.format]=customerFormat(c);
+    store.versions.push({version,setId:c.id,effective:'2026-01-01',by:'System',at:'01 Jan 2026',reason:c.note,changes:[],formats:base});
+    store.sets.push({id:c.id,name:c.name,formats:[c.format],current:version});
+  }
+  return store;
 }
 let FORMULAS=defaultFormulaStore();
 const setFormulaStore=s=>{FORMULAS=s&&s.versions&&s.versions.length?s:defaultFormulaStore()};
@@ -177,6 +263,26 @@ const fmtCfg=format=>cfgIn(currentFormulas(),format);
 const cfgOf=c=>cfgIn(formulaVersion(c.fv||1),c.format);
 const sectionsOf=c=>cfgOf(c).sections;
 const isPositive=f=>!!(f[4]&&f[4].positive),isRequired=f=>!!(f[4]&&f[4].req);
+/* Who fills a column: the Supplier (prices and details) or WEBPARK (fixed in the request form; the Supplier cannot change it).
+   An explicit setting in the formula library wins; otherwise the formula parameters and BOM lines are WEBPARK's. */
+const WEBPARK_FIXED_KEYS=/^(loss|pm|pmBase|perPiece)$/;
+function filledBy(section,f){
+  const by=f[4]&&f[4].by;if(by==='roki'||by==='supplier')return by;
+  if(WEBPARK_FIXED_KEYS.test(f[0]))return 'roki';
+  if(section&&section.key==='components'&&/^(partNo|name|qty)$/.test(f[0]))return 'roki';
+  return 'supplier';
+}
+const isFixedField=(section,f)=>filledBy(section,f)==='roki';
+/* put WEBPARK-fixed columns back to the values in the request form, whatever was typed */
+function enforceFixedFields(costs,form){
+  if(!costs||!form)return costs;
+  for(const s of cfgOf(costs).sections){
+    const rows=costs[s.key],src=form[s.key];if(!Array.isArray(rows)||!Array.isArray(src))continue;
+    rows.forEach((r,idx)=>{const o=src[idx];if(!o)return;for(const f of s.fields)if(isFixedField(s,f)&&f[0] in o)r[f[0]]=o[f[0]]});
+    if(s.key==='components'&&src.length&&rows.length!==src.length){costs[s.key]=src.map((o,idx)=>({...(rows[idx]||o),...Object.fromEntries(s.fields.filter(f=>isFixedField(s,f)&&f[0] in o).map(f=>[f[0],o[f[0]]]))}))}
+  }
+  return costs;
+}
 
 /* one row → amount, using the section's formula. Choice columns count as 0 / 1 / 2… (their position in the options). */
 function expenseOf(s,r){
@@ -250,7 +356,7 @@ function totals(c,cfgOverride){
   const amt=(s,r)=>roundBy(expenseOf(s,r),rd.row||'none',d);
   for(const s of secs)base[s.key]=(c[s.key]||[]).reduce((t,r)=>t+amt(s,r),0);
   for(const s of secs){
-    let extra=0;
+    let extra=0;const adjustments={};
     for(const a of s.adj||[]){
       const target=a.choices?adjChoice(c,a).of:a.of;
       let of;
@@ -259,10 +365,11 @@ function totals(c,cfgOverride){
         const key=target.slice(5),f=s.fields.find(x=>x[0]===key);
         of=(c[s.key]||[]).reduce((t,r)=>t+(f&&(f[3]||[]).indexOf(r[key])===1?amt(s,r):0),0);
       }else of=base[target]??0;
-      extra+=of*num(c[a.key])/100;
+      adjustments[a.key]=of*num(c[a.key])/100;
+      extra+=adjustments[a.key];
     }
     const value=roundBy(base[s.key]+extra,rd.section,d);
-    out.sections[s.key]={base:base[s.key],extra,value};out[s.letter]=value;
+    out.sections[s.key]={base:base[s.key],extra,value,adjustments};out[s.letter]=value;
   }
   out.subtotal=roundBy(secs.reduce((t,s)=>t+out[s.letter],0),rd.section,d);
   const pb=profitBase(c,cfg),valueOf=key=>key==='subtotal'?out.subtotal:out.sections[key].value;
@@ -324,6 +431,20 @@ function validateFormatConfig(cfg){
       if(!a.choices&&String(a.of).startsWith('rows:')&&!choices.has(String(a.of).slice(5)))errors.push(label+': an adjustment refers to a Yes / No column that does not exist.');
     }
   }
+  /* form template */
+  if(cfg.template){
+    const t=cfg.template;
+    if(t.blankRows!==undefined&&(!Number.isInteger(t.blankRows)||t.blankRows<0||t.blankRows>30))errors.push('Blank lines per section must be between 0 and 30.');
+    for(const h of t.header||[])if(h.show&&!String(h.label||'').trim())errors.push('Every shown header field needs a label.');
+    for(const who of ['supplier','roki'])for(const d of (t.sign&&t.sign[who])||[])if(!String(d.label||'').trim())errors.push('Every signature box needs a label.');
+  }
+  for(const s of cfg.sections){
+    const keys=new Set(s.fields.map(f=>f[0]).concat(['amount'],(s.adj||[]).map(x=>x.key)));
+    for(const c of s.printCols||[]){
+      if(!keys.has(c[0]))errors.push(s.letter+' · '+s.label+': a printed column refers to “'+c[0]+'”, which is not a column of this section.');
+      else if(!String(c[1]||'').trim())errors.push(s.letter+' · '+s.label+': every printed column needs a header.');
+    }
+  }
   const secKeys=cfg.sections.map(s=>s.key);
   if(!pctOk(Number(cfg.profit.percent))||!pctOk(Number(cfg.spare.percent)))errors.push('Percentages must be between 0 and 100.');
   if(!cfg.profit.bases.length||!cfg.profit.bases.includes(cfg.profit.base)||cfg.profit.bases.some(b=>b!=='subtotal'&&!secKeys.includes(b)))errors.push('Choose what profit & admin is based on.');
@@ -379,7 +500,7 @@ function signatures(q){
   trail.slice(Math.max(start,0)).forEach(t=>{if(t.stage)sig[t.stage]=t;if(t.stage==='S-Issue')for(const k of Object.keys(sig))if(k!=='S-Issue')delete sig[k]});
   return sig;
 }
-const snapshotOf=q=>q?{quote:q.id,revision:q.revision,total:q.total,ending:q.ending||null,qtyPeriod:q.qtyPeriod||null,costs:structuredClone(q.costs),effective:q.effective,date:q.quoteDate||q.effective,remark:q.remark,quantity:q.quantity,drawing:q.drawing,itemSnapshot:q.itemSnapshot?structuredClone(q.itemSnapshot):null,attachments:structuredClone(q.attachments||[]),trail:structuredClone(q.trail||[])}:null;
+const snapshotOf=q=>q?{quote:q.id,revision:q.revision,total:q.total,ending:q.ending||null,qtyPeriod:q.qtyPeriod||null,supplierRef:q.supplierRef||null,costs:structuredClone(q.costs),effective:q.effective,date:q.quoteDate||q.effective,remark:q.remark,quantity:q.quantity,drawing:q.drawing,itemSnapshot:q.itemSnapshot?structuredClone(q.itemSnapshot):null,attachments:structuredClone(q.attachments||[]),trail:structuredClone(q.trail||[])}:null;
 
 /* ---------- Demo data, transcribed from the sample Excel / PDF quotations in docs/ ---------- */
 function seed(){

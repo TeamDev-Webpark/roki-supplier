@@ -28,7 +28,7 @@ function syncComponents(c,item){
     let row=c.components.find(r=>r.partNo===ch.code);
     if(!row){row=blankRow(sec);row.partNo=ch.code;row.qty=ch.qty;c.components.push(row)}
     const known=db.items.find(x=>x.code===ch.code);
-    if(!row.name)row.name=known?known.name:'';
+    if(!row.name)row.name=known?known.name:ch.code;   /* a sub-part that is not in the part master is still named by its code */
     applyLink(row,ch.code,item.supplier);
   }
   return c;

@@ -58,7 +58,7 @@ function workflowRequestState(n,id){
  const latest=deskLatestNotice(id);
  if(latest?.id!==n.id&&(!q||q.status==='Rejected'))return ['superseded',wfText('Replaced by a newer request','แทนที่ด้วยคำขอใหม่แล้ว'),'gray'];
  if(q?.status==='Approved')return ['done',wfText('Completed','เสร็จสิ้น'),'green'];
- if(q?.status==='Rejected')return ['retry',wfText('Quotation rejected · new quote needed','ใบเสนอราคาถูกปฏิเสธ · รอเสนอใหม่'),'red'];
+ if(q?.status==='Rejected')return ['retry',wfText('Awaiting cost entry','รอกรอกต้นทุน'),'red'];
  if(q?.status==='Reverted')return ['correction',wfText('Supplier correcting quotation','Supplier กำลังแก้ไขใบเสนอราคา'),'purple'];
  if(q&&q.status.startsWith('ROKI '))return ['review',wfText('ROKI reviewing','โรกิกำลังตรวจ / อนุมัติ'),'blue'];
  if(q)return ['preparing',wfText('Supplier preparing / approving','Supplier กำลังจัดทำ / อนุมัติ'),'amber'];
@@ -93,3 +93,6 @@ function workflowQuotes(approval=false,sent=false){
  return content;
 }
 document.addEventListener('click',e=>{const b=e.target.closest('[data-wf-status]');if(b){filterStatus=b.dataset.wfStatus;render()}});
+
+/* The quotation workflow is exactly these five steps. Setting the review schedule is not a step: the system sends the request on schedule. */
+function flowSteps(){return [['Supplier Issue',wfText('Enter costs','กรอกต้นทุน')],['Supplier Approve',wfText('Verify and send back','ตรวจและส่งกลับ')],['WEBPARK Issue',wfText('Check the data','ตรวจสอบข้อมูล')],['WEBPARK Check',wfText('Check costs and price','ตรวจต้นทุนและราคา')],['WEBPARK Approve',wfText('Approve purchase price','อนุมัติราคาซื้อ')]]}

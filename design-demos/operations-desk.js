@@ -14,12 +14,12 @@ function deskState(key=route().split('/')[0]){if(!deskFilters.has(key))deskFilte
 function deskPhase(n,itemId,lookups){
  const q=lookups?lookups.quotes.get(n.id+':'+itemId):wfLatest(n,itemId),latest=lookups?lookups.latest.get(itemId):deskLatestNotice(itemId),historical=latest?.id!==n.id;
  const phases={
-  waiting:{key:'waiting',group:'supplier',label:wfText('Awaiting cost entry','รอกรอกต้นทุน'),owner:'Supplier Issue',color:'amber',index:1},
-  Draft:{key:'entry',group:'supplier',label:wfText('Entering costs','กำลังกรอกต้นทุน'),owner:'Supplier Issue',color:'amber',index:1},
-  'Supplier approval':{key:'supplier-approve',group:'supplier',label:wfText('Supplier review','รอตรวจภายใน Supplier'),owner:'Supplier Approve',color:'amber',index:2},
-  Reverted:{key:'correction',group:'supplier',label:wfText('Returned for correction','ส่งกลับแก้ไข'),owner:'Supplier Issue',color:'purple',index:1},
-  Rejected:{key:'replacement',group:'supplier',label:wfText('Replacement offer needed','รอเสนอราคาใหม่'),owner:'Supplier Issue',color:'red',index:1},
-  'ROKI Issue':{key:'check',group:'check',label:wfText('Awaiting cost check','รอตรวจต้นทุน'),owner:'WEBPARK Check',color:'blue',index:3},
+  waiting:{key:'waiting',group:'supplier',label:wfText('Awaiting cost entry','รอกรอกต้นทุน'),owner:'Supplier Issue',color:'amber',index:0},
+  Draft:{key:'entry',group:'supplier',label:wfText('Entering costs','กำลังกรอกต้นทุน'),owner:'Supplier Issue',color:'amber',index:0},
+  'Supplier approval':{key:'supplier-approve',group:'supplier',label:wfText('Supplier review','รอตรวจภายใน Supplier'),owner:'Supplier Approve',color:'amber',index:1},
+  Reverted:{key:'correction',group:'supplier',label:wfText('Returned for correction','ส่งกลับแก้ไข'),owner:'Supplier Issue',color:'purple',index:0},
+  Rejected:{key:'waiting',group:'supplier',label:wfText('Awaiting cost entry','รอกรอกต้นทุน'),owner:'Supplier Issue',color:'amber',index:0},
+  'ROKI Issue':{key:'issue',group:'issue',label:wfText('Awaiting WEBPARK Issue','รอ WEBPARK Issue'),owner:'WEBPARK Issue',color:'blue',index:2},
   'ROKI Check':{key:'check',group:'check',label:wfText('Awaiting WEBPARK Check','รอ WEBPARK Check'),owner:'WEBPARK Check',color:'blue',index:3},
   'ROKI Approve':{key:'approve',group:'approve',label:wfText('Awaiting final approval','รออนุมัติราคาซื้อ'),owner:'WEBPARK Approve',color:'blue',index:4},
   Approved:{key:'completed',group:'completed',label:wfText('Price approved','อนุมัติราคาแล้ว'),owner:'',color:'green',index:5}
@@ -44,8 +44,10 @@ function deskDraftFor(itemId){return db.priceRequests.find(r=>r.items.includes(i
 function deskFirstTime(i){return !db.quotes.some(q=>q.item===i.id)&&!db.notifications.some(n=>n.items.includes(i.id))}
 function deskDueParts(){return db.items.filter(i=>i.next&&i.next<=TODAY&&!deskFirstTime(i)&&!deskPendingPair(i.id))}
 function deskNewParts(){return db.items.filter(i=>deskFirstTime(i)&&!deskPendingPair(i.id))}
-function deskRows(){
- const rows=[...deskSentPairs()];if(portal!=='roki')return rows;
+function deskRows(){return [...deskSentPairs()]}
+/* saved requests that were never sent: shown on the first-time request page, not in request tracking */
+function deskUnsentRows(){
+ const rows=[];if(portal!=='roki')return rows;
  for(const r of db.priceRequests.filter(r=>rfqDelivery(r)!=='Sent'))for(const id of r.items){const i=db.items.find(i=>i.id===id);if(!i)continue;
   const closed=['Cancelled','Rejected'].includes(r.status);
   rows.push({key:r.id+':'+id,n:null,r,i,phase:{key:closed?'cancelled':'unsent',group:closed?'cancelled':'unsent',label:closed?wfText('Closed request','คำขอปิดแล้ว'):wfText('Not sent yet','ยังไม่ส่งคำขอ'),owner:closed?'':'WEBPARK Issue',color:'gray',index:0,historical:closed,late:false,q:null,offer:null}});
@@ -56,47 +58,58 @@ function deskFiltered(rows,state){const query=state.query.toLowerCase();return r
 function deskPage(rows,state){const pages=Math.max(1,Math.ceil(rows.length/state.size));state.page=Math.max(1,Math.min(state.page,pages));return {items:rows.slice((state.page-1)*state.size,state.page*state.size),pages}}
 function deskNavBadge(id){
  let count=null;if(portal==='roki'){
-  if(id==='schedule')count=deskDueParts().length;
+  if(id==='schedule')count=deskVisibleRows(deskRows(),'active').length;
   if(id==='request-new')count=deskNewParts().length;
-  if(id==='request-register')count=deskVisibleRows(deskRows(),'active').length;
+  if(id==='schedule-active')count=deskDueParts().length;
   if(id==='approvals')count=visibleQuotes().filter(pendingForRole).length;
- }else if(id==='approvals')count=visibleQuotes().filter(workflowQueue).length;
+  if(id==='sent')count=visibleQuotes().filter(q=>['ROKI Issue','ROKI Check','ROKI Approve'].includes(q.status)).length;
+ }else if(id==='approvals')count=visibleQuotes().filter(workflowQueue).length+(user.role==='Issue'?deskSentPairs().filter(r=>!r.phase.historical&&r.phase.key==='waiting').length:0);
  return count?`<b class="count">${count}</b>`:'';
 }
 function workflowNav(){
  const n=(icon,id,en,th,group)=>[icon,id,wfText(en,th),group];
- const approvals=['Check','Approve'].includes(user.role)?[
-  n('check','approvals',user.role==='Check'?'Pending checks':'Pending approvals',user.role==='Check'?'รอตรวจสอบ (Check)':'รออนุมัติ (Approve)','approval')
- ]:[];
+ /* the role's own work comes first so it is the first thing seen after login */
+ const task=portal==='roki'
+  ?[n('check','approvals',({Issue:'Pending issues',Check:'Pending checks',Approve:'Pending approvals'})[user.role],({Issue:'รอ Issue',Check:'รอตรวจสอบ (Check)',Approve:'รออนุมัติ (Approve)'})[user.role],'task')]
+  :[n('check','approvals',user.role==='Issue'?'Cost entry tasks':'Pending approvals',user.role==='Issue'?'งานกรอกต้นทุน':'รออนุมัติ (Approve)','task')];
  return portal==='roki'?[
+ ...task,
  n('grid','overview','Overview','ภาพรวม',''),
- ...approvals,
- n('clock','schedule','Due for review','รายการถึงรอบทบทวน','planning'),
- n('file','schedule-active','Active schedules','กำหนดการที่ใช้งาน','planning'),
- ...(user.role==='Issue'?[n('plus','request-new','First-time request','สร้างคำขอครั้งแรก','planning')]:[]),
- n('file','request-register','Request tracking','ติดตามคำขอทั้งหมด','requests'),
- n('compare','quotes','Quotations','ใบเสนอราคา','requests'),
+ ...(user.role==='Issue'?[n('plus','request-new','Create review schedule','สร้างกำหนดรอบทบทวน','requests')]:[]),
+ n('clock','schedule','Request follow-up','ติดตามคำขอ','requests'),
+ n('compare','sent','Awaiting WEBPARK','รอดำเนินการภายใน','requests'),
+ n('file','schedule-active','All review schedules','รายการกำหนดรอบทบทวนทั้งหมด','requests'),
+ n('file','quotes','Quotations in use','ใบเสนอราคาที่กำลังใช้','requests'),
  n('box','parts','Parts & assemblies','ชิ้นส่วนและชุดประกอบ','reference'),n('settings','formulas','Formula library','คลังสูตรคำนวณ','reference'),n('chart','records','Reports & history','รายงานและประวัติ','reference')]:[
+ ...task,
  n('grid','overview','Overview','ภาพรวม',''),
- ...approvals,
- n('bell','requests','Received requests','คำขอที่ได้รับ','requests'),
- ...(user.role==='Issue'?[n('check','approvals','My cost entries','งานกรอก / แก้ไขต้นทุน','requests')]:[]),
- n('file','quotes','Quotations','ใบเสนอราคา','requests'),n('compare','sent','Submitted quotations','ติดตามใบที่ส่งกลับ','requests'),n('box','parts','Assigned parts','ชิ้นส่วนที่รับผิดชอบ','reference'),n('chart','records','Reports & history','รายงานและประวัติ','reference')];
+ ...(user.role==='Issue'?[]:[n('bell','requests','Request tracking','ติดตามคำขอ','requests')]),
+ n('compare','sent','Sent to WEBPARK','ส่งแล้ว · รอ WEBPARK','requests'),
+ n('file','quotes','Quotations in use','ใบเสนอราคาที่ใช้อยู่','requests'),
+ n('box','parts','Assigned parts','ชิ้นส่วนที่รับผิดชอบ','reference'),n('chart','records','Reports & history','รายงานและประวัติ','reference')];
 }
-function workflowGroup(key){return ({approval:wfText('Checks and approvals','การตรวจสอบและอนุมัติ'),planning:wfText('Review planning','กำหนดรอบและสร้างคำขอ'),requests:wfText('Requests and purchase prices','คำขอและราคาซื้อ'),reference:wfText('Reference information','ข้อมูลอ้างอิง')})[key]||''}
-function recordParentPage(page){
- if(page==='request-detail'||page==='process')return portal==='roki'?'request-register':'requests';
- if(page==='request-new'&&route().split('/')[1])return 'request-register';
- if(page==='request-form')return route().split('/')[1]?'request-register':'request-new';
- if(['quote','print'].includes(page)){const q=visibleQuotes().find(q=>q.id===route().split('/')[1]);return q&&workflowQueue(q)&&navs().some(n=>n[1]==='approvals')?'approvals':'quotes'}
+function workflowGroup(key){return ({task:wfText('My tasks','งานของฉัน'),overview:wfText('Overview','ภาพรวม'),approval:wfText('Checks and approvals','การตรวจสอบและอนุมัติ'),planning:wfText('Review planning','กำหนดรอบและสร้างคำขอ'),requests:wfText('Requests and purchase prices','คำขอและราคาซื้อ'),reference:wfText('Reference information','ข้อมูลอ้างอิง')})[key]||''}
+function recordParentPage(page,id){
+ const requestMenu=portal==='roki'?'schedule':user.role==='Issue'?'approvals':'requests';
+ if(['requests','request-detail','process','request-register','request-tracking','supplier-waiting'].includes(page))return requestMenu;
+ if(page==='request-form'||page==='request-new')return id?'schedule':'request-new';
+ if(page==='new'||page==='edit')return 'approvals';
+ if(page==='quote'||page==='print'){
+  const q=visibleQuotes().find(q=>q.id===id);
+  if(!q)return '';
+  if(workflowQueue(q))return 'approvals';
+  if(['ROKI Issue','ROKI Check','ROKI Approve'].includes(q.status))return 'sent';
+  return q.status==='Approved'&&priceValidity(q)==='active'?'quotes':'records';
+ }
  return ({part:'parts',supplier:'records',account:'records','price-record':'records','formula-version':'formulas',reports:'records',history:'records',outbox:'records',exports:'records',suppliers:'records'})[page]||page;
 }
 function workflowCanOpen(page){
+ if(page==='requests')return portal==='supplier';
  if(['schedule','schedule-active'].includes(page))return portal==='roki';
  if(page==='request-new'||page==='request-form')return rfqCanCreate();
  if(['request-drafts','request-dispatch','internal-pending','request-review'].includes(page))return false;
  if(['supplier-waiting','request-tracking','suppliers','exports'].includes(page))return portal==='roki';
- return ['quote','print','process',...recordDetailPages,'records','reports','history','outbox'].includes(page)||(['new','edit'].includes(page)?portal==='supplier'&&user.role==='Issue':navs().some(n=>n[1]===page));
+ return ['quote','print','process',...(portal==='roki'?['request-register']:[]),...recordDetailPages,'records','reports','history','outbox'].includes(page)||(['new','edit'].includes(page)?portal==='supplier'&&user.role==='Issue':navs().some(n=>n[1]===page));
 }
 function deskEmpty(text){return `<div class="desk-empty">${icon('check')}<p>${text}</p></div>`}
 function deskSupplierOptions(value){return `<option value="">${wfText('All suppliers','Supplier ทั้งหมด')}</option>${suppliers.filter(s=>portal==='roki'||s.id===user.supplier).map(s=>`<option value="${s.id}" ${value===s.id?'selected':''}>${esc(s.name)}</option>`).join('')}`}
@@ -116,7 +129,7 @@ function deskRowAction(row){
  if(q&&pendingForRole(q))return `<a class="button primary" href="#quote/${q.id}">${portal==='roki'?(user.role==='Check'?wfText('Check costs','ตรวจต้นทุน'):wfText('Approve price','อนุมัติราคา')):wfText('Review quotation','ตรวจ / อนุมัติ')}</a>`;
  if(portal==='supplier'&&user.role==='Issue'&&!row.phase.historical){
   if(q&&canEdit(q))return `<button class="button primary" data-edit="${q.id}">${wfText('Edit costs','แก้ไขต้นทุน')}</button>`;
-  if(row.n&&['waiting','replacement'].includes(row.phase.key))return `<button class="button primary" data-request="${row.n.id}" data-item="${row.i.id}">${wfText('Enter costs','กรอกต้นทุน')}</button>`;
+  if(row.n&&row.phase.key==='waiting')return `<button class="button primary" data-request="${row.n.id}" data-item="${row.i.id}">${wfText('Enter costs','กรอกต้นทุน')}</button>`;
  }
  if(!row.n&&row.r&&rfqEditable(row.r))return `<a class="button primary" href="#request-new/${row.r.id}">${wfText('Continue request','ดำเนินการต่อ')}</a>`;
  return `<a class="button" href="#${row.n?'request-detail/'+row.n.id+'/'+row.i.id:'request-register/'+row.r.id}">${wfText('View details','ดูรายละเอียด')}</a>`;
@@ -125,28 +138,26 @@ function deskRequestTable(rows,key,{pagination=true}={}){
  const state=deskState(key),page=pagination?deskPage(rows,state):{items:rows,pages:1};
  return `<div class="table-wrap desk-table-wrap"><table class="data-table desk-table desk-request-table" data-desk-table="requests"><thead><tr><th>${wfText('Part / source request','ชิ้นส่วน / คำขอต้นทาง')}</th><th>Supplier</th><th>${wfText('Current stage / owner','ขั้นตอนปัจจุบัน / ผู้รับผิดชอบ')}</th><th>${wfText('Supplier response due','กำหนด Supplier ตอบ')}</th><th>${wfText('Quotation','ใบเสนอราคา')}</th><th>${wfText('Action','ดำเนินการ')}</th></tr></thead><tbody>${page.items.map(row=>`<tr ${detailRowAttrs(row.n?'request-detail/'+row.n.id+'/'+row.i.id:'request-register/'+row.r.id)} data-desk-row="${esc(row.key)}" data-desk-stage="${row.phase.group}" ${row.n?`data-request-row="${row.n.id}" data-item-row="${row.i.id}"`:''}><td>${deskPart(row.i,row.r?.id)}${!row.r&&row.n?`<span class="desk-source">${esc(row.n.id)}</span>`:''}</td><td><span class="desk-supplier">${esc(supplierName(row.n?.supplier||row.i.supplier))}</span></td><td>${deskPhaseCell(row)}</td><td><time>${date(row.n?.due||row.r?.due)}</time>${row.phase.late?`<span class="desk-late">${wfText('Supplier overdue','Supplier เกินกำหนด')}</span>`:''}</td><td>${deskQuotationCell(row)}</td><td class="desk-actions">${deskRowAction(row)}</td></tr>`).join('')}</tbody></table></div>${!rows.length?deskEmpty(wfText('No items in this queue.','ไม่มีรายการในคิวนี้')):''}${pagination?deskPager(key,rows.length,page.pages):''}`;
 }
-function deskSelectionFooter(){const supplier=selectedRequestSupplier();return `<div class="desk-selection"><span><strong>${selected.size}</strong> ${wfText('parts in one request','ชิ้นส่วนในคำขอเดียว')}<small>${supplier?esc(supplierName(supplier)):wfText('Select parts from one Supplier','เลือกชิ้นส่วนจาก Supplier บริษัทเดียวกัน')}</small></span><div><button class="button" data-desk-clear ${!selected.size?'disabled':''}>${wfText('Clear selection / change Supplier','ล้างรายการ / เปลี่ยน Supplier')}</button><button class="button primary" data-action="notify" ${!selected.size?'disabled':''}>${wfText('Review and send selected parts','ตรวจและส่งรายการที่เลือก')}${icon('arrow')}</button></div></div>`}
+function deskSelectionFooter(){const supplier=selectedRequestSupplier();return `<div class="desk-selection"><span><strong>${selected.size}</strong> ${wfText('parts in one schedule','ชิ้นส่วนในกำหนดการเดียว')}<small>${supplier?esc(supplierName(supplier)):wfText('Select parts from one Supplier','เลือกชิ้นส่วนจาก Supplier บริษัทเดียวกัน')}</small></span><div><button class="button" data-desk-clear ${!selected.size?'disabled':''}>${wfText('Clear selection / change Supplier','ล้างรายการ / เปลี่ยน Supplier')}</button><button class="button primary" data-action="notify" ${!selected.size?'disabled':''}>${wfText('Set schedule for selected parts','ตั้งกำหนดการรายการที่เลือก')}${icon('arrow')}</button></div></div>`}
 function deskPartTable(parts,key,{selectable=false,request=null,schedules=false}={}){
- const state=deskState(key),page=deskPage(parts,state),selectedSupplier=selectedRequestSupplier();
- return `${selectable?requestSelectionContext():''}<div class="table-wrap desk-table-wrap"><table class="data-table desk-table desk-planning-table" data-desk-table="${schedules?'schedules':'selection'}"><thead><tr>${selectable?`<th class="desk-checkbox"><input id="select-all" type="checkbox" aria-label="${wfText('Select ready items on this page','เลือกรายการพร้อมส่งในหน้านี้')}"></th>`:''}<th>${wfText('Part / Supplier','ชิ้นส่วน / Supplier')}</th><th>${wfText('Review interval','รอบทบทวน')}</th><th>${wfText('Review date','วันที่ทบทวน')}</th><th>${schedules?wfText('Current reference price','ราคาที่มีผลปัจจุบัน'):wfText('Default formula','สูตรเริ่มต้น')}</th><th>${wfText('Readiness','สถานะรายการ')}</th><th>${wfText('Action','ดำเนินการ')}</th></tr></thead><tbody>${page.items.map(i=>{
+ const state=deskState(key),page=deskPage(parts,state),selectedSupplier=selectedRequestSupplier(),first=!schedules&&!request;
+ return `${selectable?requestSelectionContext():''}<div class="table-wrap desk-table-wrap"><table class="data-table desk-table desk-planning-table" data-desk-table="${schedules?'schedules':'selection'}"><thead><tr>${selectable?`<th class="desk-checkbox"><input id="select-all" type="checkbox" aria-label="${wfText('Select ready items on this page','เลือกรายการพร้อมส่งในหน้านี้')}"></th>`:''}<th>${wfText('Part / Supplier','ชิ้นส่วน / Supplier')}</th>${first?'':`<th>${wfText('Review interval','รอบทบทวน')}</th>`}${first?'':`<th>${wfText('Review date','วันที่ทบทวน')}</th>`}<th>${schedules?wfText('Current reference price','ราคาที่มีผลปัจจุบัน'):wfText('Default formula','สูตรเริ่มต้น')}</th><th>${wfText('Readiness','สถานะรายการ')}</th><th>${wfText('Action','ดำเนินการ')}</th></tr></thead><tbody>${page.items.map(i=>{
  const draft=deskDraftFor(i.id),pending=deskPendingPair(i.id),canSelect=rfqCanCreate()&&!pending&&(!draft||draft.id===request?.id)&&(!selectedSupplier||i.supplier===selectedSupplier||selected.has(i.id)),state=deskScheduleState(i);
- return `<tr ${detailRowAttrs('process/'+i.id)} data-plan-item="${i.id}" data-schedule-state="${state.key}">${selectable?`<td class="desk-checkbox"><input type="checkbox" data-select="${i.id}" aria-label="${esc(i.code+' '+supplierName(i.supplier))}" ${!canSelect?'disabled':''} ${selected.has(i.id)?'checked':''}></td>`:''}<td>${deskPart(i)}<span class="desk-supplier">${esc(supplierName(i.supplier))}</span></td><td><span class="desk-interval">${i.cadence||3} ${wfText('months','เดือน')}</span></td><td><time>${date(i.next)}</time>${i.next&&i.next<TODAY&&!pending?`<span class="desk-late">${wfText('Review date passed','ถึงกำหนดแล้ว')}</span>`:''}</td><td>${schedules?`<strong class="desk-amount">${i.price==null?'—':cash(i.price)}</strong><span class="desk-secondary">${wfText('THB / pc','บาท/ชิ้น')}</span>`:`<span class="desk-formula-name">${esc(formulaLabel(suggestedFormula(i,request)))}</span>`}</td><td>${draft&&!request?statusPill(wfText('Prepared, not sent','จัดทำแล้ว ยังไม่ส่ง'),'gray'):statusPill(state.label,state.color)}</td><td class="desk-actions">${requestItemAction(i,{schedules,request})}</td></tr>`;
+ return `<tr ${detailRowAttrs('part/'+i.id)} data-plan-item="${i.id}" data-schedule-state="${state.key}">${selectable?`<td class="desk-checkbox"><input type="checkbox" data-select="${i.id}" aria-label="${esc(i.code+' '+supplierName(i.supplier))}" ${!canSelect?'disabled':''} ${selected.has(i.id)?'checked':''}></td>`:''}<td>${deskPart(i)}<span class="desk-supplier">${esc(supplierName(i.supplier))}</span></td>${first?'':`<td><span class="desk-interval">${i.cadence||3} ${wfText('months','เดือน')}</span></td>`}${first?'':`<td><time>${date(i.next)}</time>${i.next&&i.next<TODAY&&!pending?`<span class="desk-late">${wfText('Review date passed','ถึงกำหนดแล้ว')}</span>`:''}</td>`}<td>${schedules?`<strong class="desk-amount">${i.price==null?'—':cash(i.price)}</strong><span class="desk-secondary">${wfText('THB / pc','บาท/ชิ้น')}</span>`:`<span class="desk-formula-name">${esc(formulaLabel(suggestedFormula(i,request)))}</span>`}</td><td>${draft&&!request?statusPill(wfText('Prepared, not sent','จัดทำแล้ว ยังไม่ส่ง'),'gray'):statusPill(state.label,state.color)}</td><td class="desk-actions">${requestItemAction(i,{schedules,request})}</td></tr>`;
  }).join('')}</tbody></table></div>${!parts.length?deskEmpty(schedules?wfText('No configured schedules match these filters.','ไม่มีกำหนดการที่ตรงกับตัวกรอง'):wfText('No items awaiting a new request in this view.','ไม่มีรายการรอสร้างคำขอในมุมมองนี้')):''}${deskPager(key,parts.length,page.pages)}${selectable?deskSelectionFooter():''}`;
 }
 function deskScheduleState(i){
  const pair=deskPendingPair(i.id);if(pair)return {key:'processing',label:wfText('Request sent · in progress','ส่งคำขอแล้ว · อยู่ระหว่างดำเนินการ'),color:'blue'};
  if(deskFirstTime(i))return {key:'new',label:wfText('First quotation needed','รอเสนอราคาครั้งแรก'),color:'gray'};
- if(i.next&&i.next<=TODAY)return {key:'due',label:wfText('Due, not sent','ถึงรอบแล้ว · ยังไม่ส่ง'),color:'amber'};
+ if(i.next&&i.next<=TODAY)return {key:'due',label:wfText('Due · sent by the system','ถึงรอบแล้ว · ระบบกำลังส่ง'),color:'amber'};
  return {key:'upcoming',label:wfText('Upcoming review','ยังไม่ถึงรอบ'),color:'green'};
 }
 function deskFilterParts(parts,state){return parts.filter(i=>(!state.supplier||i.supplier===state.supplier)&&(!state.cadence||String(i.cadence)===state.cadence)&&(!state.query||[i.code,i.name,supplierName(i.supplier)].join(' ').toLowerCase().includes(state.query.toLowerCase())))}
 function deskPanel(title,sub,count,content,id){return `<section class="panel desk-panel" ${id?`data-desk-section="${id}"`:''}><header class="desk-panel-heading"><div><h2>${title} <span class="desk-count">${count}</span></h2><p>${sub}</p></div></header>${content}</section>`}
 function dueReviewView(){
- if(portal!=='roki')return rfqDenied();const key='schedule',state=deskState(key),ready=deskFilterParts(deskDueParts(),state),sent=deskFiltered(deskSentPairs().filter(row=>!row.phase.historical&&row.phase.group!=='completed'),state);
- return heading(wfText('Review planning','กำหนดการทบทวนราคา'),wfText('Due for review','รายการถึงรอบทบทวน'),wfText('Unsent review items and sent cycles are shown separately. A sent item cannot be selected again until its current cycle is complete.','แยกรายการที่ยังไม่ส่งคำขอออกจากรอบที่ส่งแล้ว เพื่อไม่ให้สร้างคำขอซ้ำระหว่างดำเนินการ'),rfqCanCreate()?wfLink('request-new','First-time request','สร้างคำขอครั้งแรก',true):'')+
- `<div class="desk-totals"><span><strong>${ready.length}</strong>${wfText('due, not sent','ถึงรอบแล้ว ยังไม่ส่ง')}</span><span><strong>${sent.length}</strong>${wfText('sent, cycle in progress','ส่งแล้ว อยู่ระหว่างดำเนินการ')}</span><a href="#schedule-active">${wfText('View all active schedules','ดูกำหนดการที่ใช้งานทั้งหมด')}${icon('arrow')}</a></div>`+deskFiltersBar(key,{cadence:true})+
- deskPanel(wfText('Due items awaiting a request','ถึงกำหนดแล้ว · รอส่งคำขอ'),wfText('Select ready items, then set their forms and send. Saved unsent requests can be resumed here.','เลือกรายการพร้อมส่งเพื่อกำหนดแบบฟอร์ม รายการที่เคยบันทึกไว้สามารถกดดำเนินการต่อได้'),ready.length,deskPartTable(ready,'schedule-ready',{selectable:rfqCanCreate()}),'due')+
- deskPanel(wfText('Sent cycles still in progress','ส่งคำขอแล้ว · อยู่ระหว่างดำเนินการ'),wfText('These items are excluded from the selection table above. The current owner and next action are shown for each item.','รายการในตารางนี้จะไม่ซ้ำกับตารางรอส่งด้านบน ตรวจได้ทันทีว่างานอยู่ที่ Supplier, Check หรือ Approve'),sent.length,deskRequestTable(sent,'schedule-sent'),'sent');
+ if(portal!=='roki')return rfqDenied();const key='request-register',state=deskState(key),upcomingCount=db.items.filter(i=>i.next&&i.next>TODAY&&!deskFirstTime(i)).length,all=deskFiltered(deskRows(),state),waiting=all.filter(row=>!row.phase.historical&&row.phase.key==='waiting').length;
+ return heading(wfText('Requests and purchase prices','คำขอและราคาซื้อ'),wfText('Request follow-up','ติดตามคำขอ'),wfText('Every request already sent to a Supplier, by stage. The system sends each review by itself when it is due; WEBPARK Issue takes over after the Supplier approves and returns the quotation.','คำขอทั้งหมดที่ส่งให้ Supplier แล้ว แยกตามขั้นตอน ระบบส่งคำขอทบทวนเองเมื่อถึงรอบ ฝ่าย WEBPARK Issue รับงานต่อหลัง Supplier อนุมัติและส่งกลับ'),rfqCanCreate()?wfLink('request-new','Create review schedule','สร้างกำหนดรอบทบทวน',true):'')+
+ `<div class="desk-totals"><span><strong>${waiting}</strong>${wfText('sent, awaiting cost entry','ส่งแล้ว รอกรอกต้นทุน')}</span><span><strong>${upcomingCount}</strong>${wfText('upcoming reviews','รอบทบทวนที่กำลังมา')}</span><a href="#schedule-active">${wfText('View all active schedules','ดูกำหนดการที่ใช้งานทั้งหมด')}${icon('arrow')}</a></div>`+requestTrackingPanel(key);
 }
 function activeScheduleView(){
  if(portal!=='roki')return rfqDenied();const key='schedule-active',state=deskState(key),configured=currentItems().filter(i=>!!i.next),rows=deskFilterParts(configured,state).filter(i=>state.stage==='active'||deskScheduleState(i).key===state.stage);
@@ -158,55 +169,149 @@ function rfqComposer(){
  const id=route().split('/')[1],r=id?rfqRecords().find(r=>r.id===id):null;if(id&&(!r||!rfqEditable(r)))return rfqDenied();
  if(id&&requestSelectionFor!==id){selected=new Set(r.items);requestSelectionFor=id}
  const key=r?'request-edit':'request-new',state=deskState(key),items=deskFilterParts(r?db.items.filter(i=>r.items.includes(i.id)):deskNewParts(),state);
- return heading(wfText('Create request','สร้างคำขอเสนอราคา'),r?wfText('Complete and send the saved request','ตรวจแบบฟอร์มและส่งคำขอที่บันทึกไว้'):wfText('First-time quotation request','สร้างคำขอสำหรับรายการใหม่'),r?wfText('The request has not been sent. Review its selected items and complete the form before sending directly to Supplier.','คำขอนี้ยังไม่ส่ง ตรวจรายการและรายละเอียดแบบฟอร์มก่อนส่งตรงให้ Supplier'):wfText('Only parts without any previous quotation or sent request appear here. Recurring reviews are handled on Due for review.','เฉพาะชิ้นส่วนที่ยังไม่เคยมีใบเสนอราคาหรือส่งคำขอ รายการทบทวนรอบเดิมอยู่ที่หน้ารายการถึงรอบทบทวน'),wfLink(r?'request-register':'schedule',r?'Request tracking':'Due review items',r?'กลับหน้าติดตามคำขอ':'ไปยังรายการทบทวนรอบเดิม'))+
- deskPanel(r?wfText('Selected request items','รายการในคำขอ'):wfText('Parts awaiting their first quotation','ชิ้นส่วนที่รอเสนอราคาครั้งแรก'),wfText('Each selected item can use its own formula and version.','กำหนดสูตรและเวอร์ชันแยกให้แต่ละรายการได้'),items.length,deskFiltersBar(key,{cadence:!r})+deskPartTable(items,key,{selectable:true,request:r}),'first-time');
+ return heading(wfText('Review planning','กำหนดการทบทวนราคา'),r?wfText('Complete and send the saved request','ตรวจแบบฟอร์มและส่งคำขอที่บันทึกไว้'):wfText('Create review schedule','สร้างกำหนดรอบทบทวน'),r?wfText('The request has not been sent. Review its selected items and complete the form before sending directly to Supplier.','คำขอนี้ยังไม่ส่ง ตรวจรายการและรายละเอียดแบบฟอร์มก่อนส่งตรงให้ Supplier'):wfText('Parts with no quotation yet. Select them to set the review schedule and send the first request; later reviews are sent by the system.','ชิ้นส่วนที่ยังไม่เคยเสนอราคา เลือกรายการเพื่อตั้งกำหนดการทบทวนและส่งคำขอแรก หลังจากนั้นระบบส่งรอบทบทวนให้เองอัตโนมัติ'),wfLink(r?'request-register':'schedule',r?'Request tracking':'Due review items',r?'กลับหน้าติดตามคำขอ':'ไปยังรายการทบทวนรอบเดิม'))+
+ deskPanel(r?wfText('Selected request items','รายการในคำขอ'):wfText('Parts awaiting their first quotation','ชิ้นส่วนที่รอเสนอราคาครั้งแรก'),wfText('Each selected item can use its own formula and version.','กำหนดสูตรและเวอร์ชันแยกให้แต่ละรายการได้'),items.length,deskFiltersBar(key,{cadence:false})+deskPartTable(items,key,{selectable:true,request:r}),'first-time')+(r?'':deskDraftsPanel());
 }
-function deskRequestTabs(rows,key){const state=deskState(key);return `<div class="desk-queue-tabs" role="group" aria-label="${wfText('Request stage','ขั้นตอนคำขอ')}">${[['active','In progress','กำลังดำเนินการ'],['supplier','Waiting for Supplier','รอ Supplier'],['check','WEBPARK Check','รอ Check'],['approve','WEBPARK Approve','รอ Approve'],['unsent','Not sent','ยังไม่ส่ง'],['history','History / completed','ประวัติ / เสร็จแล้ว'],['all','All cycles','ทุกรอบ']].filter(([id])=>portal==='roki'||id!=='unsent').map(([id,en,th])=>`<button data-desk-stage="${id}" data-desk-key="${key}" class="${state.stage===id?'active':''}" aria-pressed="${state.stage===id}">${wfText(en,th)}<span>${deskVisibleRows(rows,id).length}</span></button>`).join('')}</div>`}
+function deskDraftsPanel(){
+ const rows=deskUnsentRows().filter(row=>row.phase.key==='unsent');
+ return rows.length?deskPanel(wfText('Saved requests not yet sent','คำขอที่บันทึกไว้ ยังไม่ส่ง'),wfText('Continue a saved first-time request and send it to the Supplier.','เปิดคำขอครั้งแรกที่บันทึกไว้เพื่อส่งให้ Supplier'),rows.length,deskRequestTable(rows,'request-drafts'),'drafts'):'';
+}
+function deskRequestTabs(rows,key){const state=deskState(key);return `<div class="desk-queue-tabs" role="group" aria-label="${wfText('Request stage','ขั้นตอนคำขอ')}">${[['active','In progress','กำลังดำเนินการ'],['supplier','Waiting for Supplier','รอ Supplier'],['issue','WEBPARK Issue','รอ Issue'],['check','WEBPARK Check','รอ Check'],['approve','WEBPARK Approve','รอ Approve'],['history','History / completed','ประวัติ / เสร็จแล้ว'],['all','All cycles','ทุกรอบ']].filter(([id])=>portal==='roki'||id!=='unsent').map(([id,en,th])=>`<button data-desk-stage="${id}" data-desk-key="${key}" class="${state.stage===id?'active':''}" aria-pressed="${state.stage===id}">${wfText(en,th)}<span>${deskVisibleRows(rows,id).length}</span></button>`).join('')}</div>`}
+function requestTrackingPanel(key,forcedStage){
+ const state=deskState(key),all=deskFiltered(deskRows(),state),stage=forcedStage||state.stage,rows=deskVisibleRows(all,stage).slice().reverse();
+ return `<section class="panel desk-panel">${deskFiltersBar(key)}${forcedStage?'':deskRequestTabs(all,key)}${deskRequestTable(rows,key)}</section>`;
+}
 function requestTrackingView(forcedStage){
- const key=portal==='supplier'?'requests':forcedStage?'supplier-waiting':'request-register',state=deskState(key),all=deskFiltered(deskRows(),state),stage=forcedStage||state.stage,rows=deskVisibleRows(all,stage).slice().reverse();
- return heading(wfText('Requests and purchase prices','คำขอและราคาซื้อ'),forcedStage?wfText('Waiting for Supplier','คำขอที่รอ Supplier'):wfText('Request tracking','ติดตามคำขอเสนอราคา'),wfText('One row per requested part and Supplier, so a multi-item request can show different stages accurately. Use the stage tabs to find the current owner.','หนึ่งแถวต่อชิ้นส่วนและ Supplier คำขอเดียวอาจมีหลายขั้นตอน เลือกคิวด้านล่างเพื่อดูผู้รับผิดชอบปัจจุบัน'),rfqCanCreate()?wfLink('schedule','Send a review request','ส่งคำขอทบทวนราคา',true):'')+
- `<section class="panel desk-panel">${deskFiltersBar(key)}${forcedStage?'':deskRequestTabs(all,key)}${deskRequestTable(rows,key)}</section>`;
+ const key=portal==='supplier'?'requests':forcedStage?'supplier-waiting':'request-register';
+ return heading(wfText('Requests and purchase prices','คำขอและราคาซื้อ'),forcedStage?wfText('Waiting for Supplier','คำขอที่รอ Supplier'):wfText('Request tracking','ติดตามคำขอ'),wfText('Requests that have already been sent to a Supplier, one row per part. A part that has never been quoted is on the Review schedule page.','เฉพาะคำขอที่ส่งให้ Supplier แล้ว หนึ่งแถวต่อชิ้นส่วน ชิ้นส่วนที่ยังไม่เคยเสนอราคาอยู่ที่หน้ากำหนดรอบทบทวน'),'')+requestTrackingPanel(key,forcedStage);
 }
-function rfqRegister(){const id=route().split('/')[1];if(id)return rfqDetail(id);return requestTrackingView()}
+function rfqRegister(){const id=route().split('/')[1];if(id)return rfqDetail(id);if(portal==='roki'){setTimeout(()=>{if(route().split('/')[0]==='request-register'&&!route().split('/')[1])location.replace('#schedule')});return dueReviewView()}return requestTrackingView()}
 function workflowRequests(waitingOnly=false){return requestTrackingView(waitingOnly?'supplier':null)}
 document.addEventListener('change',e=>{const el=e.target;if(!el.dataset.deskFilter)return;const s=deskState(el.dataset.deskKey);s[el.dataset.deskFilter]=el.value;s.page=1;deskState('schedule-ready').page=1;deskState('schedule-sent').page=1;render()});
 document.addEventListener('input',e=>{const el=e.target,key=el.dataset.deskQuery;if(!key)return;const pos=el.selectionStart,s=deskState(key);s.query=el.value;s.page=1;deskState('schedule-ready').page=1;deskState('schedule-sent').page=1;render();const replacement=document.querySelector(`[data-desk-query="${key}"]`);replacement?.focus();try{replacement?.setSelectionRange(pos,pos)}catch{}});
 document.addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;if(b.dataset.deskStage){const s=deskState(b.dataset.deskKey);s.stage=b.dataset.deskStage;s.page=1;render()}if(b.dataset.deskPage){deskState(b.dataset.deskKey).page=Number(b.dataset.deskPage);render()}if(b.hasAttribute('data-desk-clear')){selected.clear();render()}});
 function rfqProgress(r){
- const pairs=deskSentPairs().filter(row=>row.r?.id===r.id),indices=r.items.map(id=>pairs.find(row=>row.i.id===id)?.phase.index||0),current=rfqDelivery(r)==='Sent'?Math.min(...indices):0;
- const steps=[['WEBPARK Issue','ส่งคำขอพร้อมแบบฟอร์ม'],['Supplier Issue','กรอกต้นทุน'],['Supplier Approve','ตรวจและส่งกลับ'],['WEBPARK Check','ตรวจต้นทุนและราคา'],['WEBPARK Approve','อนุมัติราคาซื้อ']];
- return `<div class="desk-flow-caption">${wfText('Current workflow · request preparation does not require WEBPARK approval','โฟลปัจจุบัน · ไม่ต้องอนุมัติคำขอก่อนส่ง')}${r.items.length>1?`<small>${wfText('The progress strip shows the earliest unfinished item. See each item below.','แสดงขั้นตอนแรกที่ยังไม่ครบของคำขอนี้ ตรวจสถานะรายชิ้นส่วนในตารางด้านล่าง')}</small>`:''}</div><ol class="desk-flow">${steps.map(([owner,label],i)=>`<li class="${current>i?'done':current===i?'current':''}" ${current===i?'aria-current="step"':''}><span>${current>i?icon('check'):i+1}</span><div><strong>${owner}</strong><small>${label}</small></div></li>`).join('')}</ol>`;
+ const pairs=deskSentPairs().filter(row=>row.r?.id===r.id),indices=r.items.map(id=>pairs.find(row=>row.i.id===id)?.phase.index??0),current=rfqDelivery(r)==='Sent'?Math.min(...indices):0;
+ const steps=flowSteps();
+ return `<div class="desk-flow-caption">${wfText('Workflow · the system sends the request on schedule: Supplier Issue → Supplier Approve → WEBPARK Issue → WEBPARK Check → WEBPARK Approve','โฟล · ระบบส่งคำขอเองตามกำหนดการ: Supplier Issue → Supplier Approve → WEBPARK Issue → WEBPARK Check → WEBPARK Approve')}${r.items.length>1?`<small>${wfText('The progress strip shows the earliest unfinished item. See each item below.','แสดงขั้นตอนแรกที่ยังไม่ครบของคำขอนี้ ตรวจสถานะรายชิ้นส่วนในตารางด้านล่าง')}</small>`:''}</div><ol class="desk-flow">${steps.map(([owner,label],i)=>`<li class="${current>i?'done':current===i?'current':''}" ${current===i?'aria-current="step"':''}><span>${current>i?icon('check'):i+1}</span><div><strong>${owner}</strong><small>${label}</small></div></li>`).join('')}</ol>`;
 }
 function quotationBeforeTimeline(q){
- const n=detailSentRequest(q),r=n&&db.priceRequests.find(r=>r.id===n.priceRequestId),title=wfText('1. Request preparation and delivery','1. จัดทำและส่งคำขอ');
- if(!n)return detailPanel(title,`<p>${wfText('No originating request is linked to this imported record. Earlier approvals are not inferred.','เอกสารนี้ไม่มีคำขอต้นทางที่เชื่อมโยง จึงไม่แสดงขั้นตอนที่ไม่มีหลักฐาน')}</p>`);
- const legacy=portal==='roki'&&r?.trail.filter(t=>['submit','advance'].includes(t.action));
- return detailPanel(title,`<div class="desk-source-document"><strong>${esc(r?.id||n.id)}</strong><span>${wfText('Request sent','ส่งคำขอแล้ว')}</span></div><div class="desk-timeline-event">${icon('check')}<div><strong>WEBPARK · ${wfText('sent the requested cost form','ส่งคำขอให้กรอกต้นทุน')}</strong><small>${esc(n.by)} · ${esc(n.created)}</small></div></div><p>${wfText('WEBPARK Issue chooses the form and formula, then sends directly. Cost review begins after Supplier submission.','โฟลปัจจุบันให้ WEBPARK Issue เลือกแบบฟอร์มและสูตรแล้วส่งตรง เริ่มตรวจต้นทุนหลัง Supplier ส่งกลับ')}</p><div class="workflow-tabs">${portal==='roki'&&r?wfLink('request-register/'+r.id,'View request','ดูคำขอต้นทาง'):''}${wfLink('request-detail/'+n.id+'/'+q.item,'View sent / received form','ดูแบบฟอร์มที่ส่ง / รับ')}</div>${legacy?.length?`<details class="desk-legacy-history"><summary>${wfText('Earlier workflow records','ประวัติจากโฟลเดิม')}</summary><p>${wfText('Retained for traceability; these are not required steps in the current workflow.','เก็บหลักฐานเดิมไว้เพื่ออ้างอิง ไม่ใช่ขั้นตอนที่ต้องทำในโฟลปัจจุบัน')}</p>${legacy.map(t=>`<div><strong>${esc(t.role)} · ${esc(t.user)}</strong><small>${esc(t.at)}</small></div>`).join('')}</details>`:''}`);
+ /* The request is sent by the review schedule and is not a workflow step: only records from the older internal-approval flow are kept here, collapsed. */
+ const n=detailSentRequest(q),r=n&&db.priceRequests.find(r=>r.id===n.priceRequestId),legacy=portal==='roki'&&r?.trail.filter(t=>['submit','advance'].includes(t.action));
+ if(!legacy?.length)return '';
+ return detailPanel(wfText('Earlier workflow records','ประวัติจากโฟลเดิม'),`<details class="desk-legacy-history"><summary>${wfText('Earlier workflow records','ประวัติจากโฟลเดิม')}</summary><p>${wfText('Retained for traceability; these are not required steps in the current workflow.','เก็บหลักฐานเดิมไว้เพื่ออ้างอิง ไม่ใช่ขั้นตอนที่ต้องทำในโฟลปัจจุบัน')}</p>${legacy.map(t=>`<div><strong>${esc(t.role)} · ${esc(t.user)}</strong><small>${esc(t.at)}</small></div>`).join('')}</details>`);
 }
 function quotationAfterTimeline(q){
- const steps=[['S-Issue','Supplier Issue',wfText('Enter and submit costs','กรอกและส่งต้นทุน')],['S-Approve','Supplier Approve',wfText('Approve and submit to WEBPARK','ตรวจและส่งกลับ WEBPARK')],['R-Check','WEBPARK Check',wfText('Check costs and calculated price','ตรวจต้นทุนและราคาคำนวณ')],['R-Approve','WEBPARK Approve',wfText('Approve purchase price','อนุมัติราคาซื้อ')]];
+ const stages=['S-Issue','S-Approve','R-Issue','R-Check','R-Approve'],steps=flowSteps().map(([owner,label],i)=>[stages[i],owner,label]);
+ const n=detailSentRequest(q),r=n&&portal==='roki'&&db.priceRequests.find(r=>r.id===n.priceRequestId);
  const reset=q.trail.findLastIndex(t=>!t.stage&&/returned/i.test(t.action)),trail=reset>=0?q.trail.slice(reset+1):q.trail,sig=new Map(trail.filter(t=>t.stage).map(t=>[t.stage,t]));
- const current=({Draft:0,Reverted:0,'Supplier approval':1,'ROKI Issue':2,'ROKI Check':2,'ROKI Approve':3,Approved:4,Rejected:-1})[q.status];
- return detailPanel(wfText('2. Cost entry and purchase price approval','2. กรอกต้นทุนและอนุมัติราคาซื้อ'),`<div class="desk-source-document"><a href="#quote/${q.id}">${esc(q.id)}</a>${statusBadge(q.status)}</div>${['Reverted','Rejected'].includes(q.status)?`<p class="desk-return-note">${q.status==='Reverted'?wfText('Supplier corrects and resubmits through its approver.','Supplier Issue แก้ไข แล้วผ่าน Supplier Approve ใหม่'):wfText('This quotation is closed. Supplier must submit a replacement.','ใบนี้ปิดแล้ว Supplier ต้องเสนอใบใหม่')}</p>`:''}<ol class="desk-timeline">${steps.map(([stage,owner,label],index)=>{const entry=sig.get(stage);return `<li class="${entry?'done':current===index?'current':''}" ${current===index?'aria-current="step"':''}><span>${entry?icon('check'):index+1}</span><div><strong>${owner}</strong><p>${label}</p><small>${entry?esc(entry.user)+' · '+esc(entry.at):current===index?wfText('Awaiting this role','รอบทบาทนี้ดำเนินการ'):wfText('No confirmation recorded in this round','ยังไม่มีบันทึกยืนยันในรอบนี้')}</small></div></li>`}).join('')}</ol><p>${wfText('Supplier approval goes directly to Check. There is no WEBPARK Issue receiving approval.','Supplier Approve ส่งตรงให้ Check โดยไม่มีขั้น WEBPARK Issue รับเรื่องอนุมัติซ้ำ')}</p>`);
+ const current=({Draft:0,Reverted:0,'Supplier approval':1,'ROKI Issue':2,'ROKI Check':3,'ROKI Approve':4,Approved:5,Rejected:-1})[q.status];
+ return detailPanel(wfText('Approval workflow','โฟลการอนุมัติ'),`<div class="desk-source-document"><a href="#quote/${q.id}">${esc(q.id)}</a>${statusBadge(q.status)}</div>${n?`<p class="muted-note">${wfText('Request','คำขอ')} ${esc(r?.id||n.id)} · ${wfText('sent on the review schedule','ส่งตามกำหนดการทบทวน')} ${esc(n.created)} · ${wfLink('request-detail/'+n.id+'/'+q.item,'View request & response','ดูคำขอและคำตอบ')}</p>`:`<p class="muted-note">${wfText('No originating request is linked to this quotation.','ใบเสนอราคานี้ไม่มีคำขอต้นทางเชื่อมโยง')}</p>`}${['Reverted','Rejected'].includes(q.status)?`<p class="desk-return-note">${q.status==='Reverted'?wfText('Supplier corrects and resubmits through its approver.','Supplier Issue แก้ไข แล้วผ่าน Supplier Approve ใหม่'):wfText('This quotation is closed. Supplier must submit a replacement.','ใบนี้ปิดแล้ว Supplier ต้องเสนอใบใหม่')}</p>`:''}<ol class="desk-timeline">${steps.map(([stage,owner,label],index)=>{const entry=sig.get(stage);return `<li class="${entry?'done':current===index?'current':''}" ${current===index?'aria-current="step"':''}><span>${entry?icon('check'):index+1}</span><div><strong>${owner}</strong><p>${label}</p><small>${entry?esc(entry.user)+' · '+esc(entry.at):current===index?wfText('Awaiting this role','รอบทบาทนี้ดำเนินการ'):wfText('No confirmation recorded in this round','ยังไม่มีบันทึกยืนยันในรอบนี้')}</small></div></li>`}).join('')}</ol>`);
 }
 function legacyDeskPartProcess(i){
  const reference=route().split('/')[2],q=reference&&visibleQuotes().find(q=>q.id===reference&&q.item===i.id),linked=q&&detailSentRequest(q),r=portal==='roki'&&(db.priceRequests.find(r=>r.id===reference&&r.items.includes(i.id))||db.priceRequests.find(r=>r.id===linked?.priceRequestId)),pair=linked?deskSentPairs().find(row=>row.n.id===linked.id&&row.i.id===i.id):r?deskSentPairs().find(row=>row.r?.id===r.id&&row.i.id===i.id):deskCurrentPair(i.id),offer=q||pair?.phase.offer;
  return `${r?rfqProgress(r):rfqNavigation()}${pair?deskPanel(wfText('Current responsibility','ผู้รับผิดชอบปัจจุบัน'),wfText('Follow the same request and item throughout the cycle.','อ้างอิงคำขอและชิ้นส่วนเดียวกันตลอดรอบ'),1,deskRequestTable([pair],'process-item',{pagination:false})):r?`<section class="panel body-pad"><p>${rfqNext(r)}</p>${rfqActions(r)}</section>`:''}${quotationAccessPanel(i.id,{request:r||null,notice:pair?.n||linked,quote:offer})}${offer?`<div class="desk-timeline-grid">${quotationBeforeTimeline(offer)}${quotationAfterTimeline(offer)}</div>`:pair?receivedFormPanel(pair.n,[i.id]):''}`;
 }
 function rokiWorkflowHome(){
- const rows=deskRows(),active=deskVisibleRows(rows,'active'),supplier=deskVisibleRows(rows,'supplier'),check=deskVisibleRows(rows,'check'),approve=deskVisibleRows(rows,'approve');
- return heading('WEBPARK',wfText('Review and request workspace','ภาพรวมการทบทวนและคำขอ'),wfText('Plan the next review, follow Supplier responses and verify purchase prices.','วางแผนรอบทบทวน ติดตามคำตอบ Supplier และตรวจสอบราคาซื้อ'),rfqCanCreate()?wfLink('schedule','Review due items','ดำเนินการรายการถึงรอบ',true):wfLink('approvals','My assigned work','งานที่ถึงคิวฉัน',true))+`<div class="desk-overview-links">${[['schedule',deskDueParts().length,'Due, not sent','ถึงรอบแล้ว ยังไม่ส่ง'],['request-register',supplier.length,'Waiting for Supplier','รอ Supplier'],['request-register',check.length,'Awaiting Check','รอ Check'],['request-register',approve.length,'Awaiting Approve','รอ Approve']].map(([id,count,en,th],index)=>`<a class="panel body-pad" href="#${id}" ${index>0?`data-desk-jump="${['','supplier','check','approve'][index]}"`:''}><span>${wfText(en,th)}</span><strong>${count}</strong><small>${wfText('View items','เปิดดูรายการ')} ${icon('arrow')}</small></a>`).join('')}</div>${deskPanel(wfText('Current open work','คำขอที่กำลังดำเนินการ'),wfText('Counts refer to requested part–Supplier pairs, including unsent requests.','นับเป็นรายการชิ้นส่วน–Supplier รวมรายการที่บันทึกไว้แต่ยังไม่ส่ง'),active.length,deskRequestTable(active.slice().reverse(),'overview'))}`;
+ const rows=deskRows(),active=deskVisibleRows(rows,'active'),supplier=deskVisibleRows(rows,'supplier'),issue=deskVisibleRows(rows,'issue'),check=deskVisibleRows(rows,'check'),approve=deskVisibleRows(rows,'approve');
+ return heading('WEBPARK',wfText('Review and request workspace','ภาพรวมการทบทวนและคำขอ'),wfText('Plan the next review, follow Supplier responses and verify purchase prices.','วางแผนรอบทบทวน ติดตามคำตอบ Supplier และตรวจสอบราคาซื้อ'),wfLink('approvals','My assigned work','งานที่ถึงคิวฉัน',true))+`<div class="desk-overview-links">${[['schedule',db.items.filter(i=>i.next&&i.next>TODAY).length,'Upcoming reviews (auto-sent)','รอบถัดไป (ระบบส่งเอง)'],['schedule',supplier.length,'Waiting for Supplier','รอ Supplier'],['request-register',issue.length,'Awaiting Issue','รอ Issue'],['request-register',check.length,'Awaiting Check','รอ Check'],['request-register',approve.length,'Awaiting Approve','รอ Approve']].map(([id,count,en,th],index)=>`<a class="panel body-pad" href="#${id}" ${index>0?`data-desk-jump="${['','supplier','issue','check','approve'][index]}"`:''}><span>${wfText(en,th)}</span><strong>${count}</strong><small>${wfText('View items','เปิดดูรายการ')} ${icon('arrow')}</small></a>`).join('')}</div>${deskPanel(wfText('Current open work','คำขอที่กำลังดำเนินการ'),wfText('Counts refer to requested part–Supplier pairs, including unsent requests.','นับเป็นรายการชิ้นส่วน–Supplier รวมรายการที่บันทึกไว้แต่ยังไม่ส่ง'),active.length,deskRequestTable(active.slice().reverse(),'overview'))}`;
 }
-document.addEventListener('click',e=>{const a=e.target.closest('[data-desk-jump]');if(a){const s=deskState('request-register');s.stage=a.dataset.deskJump;s.page=1;if(route().split('/')[0]==='request-register')render()}});
-function deskQuoteOwner(q){return ({Draft:'Supplier Issue',Reverted:'Supplier Issue','Supplier approval':'Supplier Approve','ROKI Issue':'WEBPARK Check','ROKI Check':'WEBPARK Check','ROKI Approve':'WEBPARK Approve'})[q.status]||''}
-function quoteTable(quotes){
+document.addEventListener('click',e=>{const a=e.target.closest('[data-desk-jump]');if(a){const s=deskState('request-register');s.stage=a.dataset.deskJump;s.page=1;if(['request-register','schedule'].includes(route().split('/')[0]))render()}});
+function deskQuoteOwner(q){return ({Draft:'Supplier Issue',Reverted:'Supplier Issue','Supplier approval':'Supplier Approve','ROKI Issue':'WEBPARK Issue','ROKI Check':'WEBPARK Check','ROKI Approve':'WEBPARK Approve'})[q.status]||''}
+function quoteTable(quotes,sortKey=''){
  if(!quotes.length)return deskEmpty(wfText('No quotations in this view.','ไม่มีใบเสนอราคาในมุมมองนี้'));
- return `<div class="table-wrap desk-table-wrap"><table class="data-table desk-table desk-quotes-table"><thead><tr><th>${wfText('Part / quotation','ชิ้นส่วน / ใบเสนอราคา')}</th>${portal==='roki'?'<th>Supplier</th>':''}<th class="num">${wfText('Approved reference','ราคาอ้างอิง')}</th><th class="num">${wfText('Calculated price','ราคาคำนวณ')}</th><th class="num">${wfText('Change','ส่วนต่าง')}</th><th>${wfText('Status / owner','สถานะ / ผู้รับผิดชอบ')}</th><th>${wfText('Action','ดำเนินการ')}</th></tr></thead><tbody>${quotes.map(q=>{const i=itemOf(q),identity=quotationIdentity(q)||i,incomplete=isIncompleteQuote(q),delta=q.previous?((q.total-q.previous)/q.previous*100):null;return `<tr data-open="${q.id}" ${detailRowAttrs('quote/'+q.id)}><td><a class="desk-record" href="#quote/${q.id}">${esc(identity.code||i.code)}</a><span class="desk-secondary desk-part-name">${esc(identity.name||i.name)}</span><span class="desk-source">${esc(q.id)} · Rev. ${q.revision}</span></td>${portal==='roki'?`<td><span class="desk-supplier">${esc(supplierName(q.supplier))}</span></td>`:''}<td class="num desk-price">${q.previous==null?'—':cash(q.previous)}</td><td class="num desk-price"><strong>${incomplete?wfText('Incomplete','ยังไม่ครบ'):cash(q.total)}</strong><small>${wfText('THB / pc','บาท/ชิ้น')}</small></td><td class="num"><span class="desk-change ${delta<0?'down':delta>0?'up':''}">${incomplete?'—':delta==null?wfText('First price','ราคาแรก'):(delta>0?'+':'')+delta.toFixed(2)+'%'}</span></td><td><div class="desk-stage">${q.status==='Approved'?validityBadge(q):statusBadge(q.status)}${deskQuoteOwner(q)?`<span class="desk-owner">${deskQuoteOwner(q)}</span>`:''}</div></td><td class="desk-actions"><a class="button ${workflowQueue(q)?'primary':''}" data-quote-access="${q.id}" href="#quote/${q.id}">${pendingForRole(q)?(user.role==='Check'?wfText('Check costs','ตรวจต้นทุน'):wfText('Review / approve','ตรวจ / อนุมัติ')):wfText('Open quotation','เปิดใบเสนอราคา')}</a></td></tr>`}).join('')}</tbody></table></div>`;
+ return `<div class="table-wrap desk-table-wrap"><table class="data-table desk-table desk-quotes-table" ${sortKey?`data-sort-page="${sortKey}"`:""}><thead><tr><th>${wfText('Part / quotation','ชิ้นส่วน / ใบเสนอราคา')}</th>${portal==='roki'?'<th>Supplier</th>':''}<th class="num">${wfText('Approved reference','ราคาอ้างอิง')}</th><th class="num">${wfText('Calculated price','ราคาคำนวณ')}</th><th class="num">${wfText('Change','ส่วนต่าง')}</th><th>${wfText('Status / owner','สถานะ / ผู้รับผิดชอบ')}</th><th>${wfText('Action','ดำเนินการ')}</th></tr></thead><tbody>${quotes.map(q=>{const i=itemOf(q),identity=quotationIdentity(q)||i,incomplete=isIncompleteQuote(q),delta=q.previous?((q.total-q.previous)/q.previous*100):null;return `<tr data-open="${q.id}" ${detailRowAttrs('quote/'+q.id)}><td><a class="desk-record" href="#quote/${q.id}">${esc(identity.code||i.code)}</a><span class="desk-secondary desk-part-name">${esc(identity.name||i.name)}</span><span class="desk-source">${esc(q.id)} · Rev. ${q.revision}</span></td>${portal==='roki'?`<td><span class="desk-supplier">${esc(supplierName(q.supplier))}</span></td>`:''}<td class="num desk-price">${q.previous==null?'—':cash(q.previous)}</td><td class="num desk-price"><strong>${incomplete?wfText('Incomplete','ยังไม่ครบ'):cash(q.total)}</strong><small>${wfText('THB / pc','บาท/ชิ้น')}</small></td><td class="num"><span class="desk-change ${delta<0?'down':delta>0?'up':''}">${incomplete?'—':delta==null?wfText('First price','ราคาแรก'):(delta>0?'+':'')+delta.toFixed(2)+'%'}</span></td><td><div class="desk-stage">${q.status==='Approved'?validityBadge(q):statusBadge(q.status)}${deskQuoteOwner(q)?`<span class="desk-owner">${deskQuoteOwner(q)}</span>`:''}</div></td><td class="desk-actions"><a class="button ${workflowQueue(q)?'primary':''}" data-quote-access="${q.id}" href="#quote/${q.id}">${pendingForRole(q)?(user.role==='Check'?wfText('Check costs','ตรวจต้นทุน'):wfText('Review / approve','ตรวจ / อนุมัติ')):wfText('Open quotation','เปิดใบเสนอราคา')}</a></td></tr>`}).join('')}</tbody></table></div>`;
 }
+function supplierIssueTasks(){
+ const mine=deskSentPairs().filter(r=>!r.phase.historical),due=mine.filter(r=>['waiting','entry'].includes(r.phase.key)).slice().reverse(),back=mine.filter(r=>r.phase.key==='correction').slice().reverse();
+ return heading(wfText('Cost entry','กรอกต้นทุน'),wfText('Cost entry tasks','งานกรอก / แก้ไขต้นทุน'),wfText('Requests that are due and quotations returned for correction are listed separately.','แยกรายการที่ถึงรอบเสนอราคา ออกจากรายการที่ถูกส่งกลับมาแก้ไข'))+
+  deskPanel(wfText('Due for quotation','ถึงรอบเสนอราคา · รอกรอกต้นทุน'),wfText('Requests sent to you for this review round. Enter costs, then send to Supplier Approve.','คำขอที่ส่งถึงคุณในรอบนี้ กรอกต้นทุนแล้วส่งให้ Supplier Approve'),due.length,due.length?deskRequestTable(due,'tasks-due'):deskEmpty(wfText('No requests are waiting for costs.','ไม่มีคำขอที่รอกรอกต้นทุน')),'tasks-due')+
+  deskPanel(wfText('Returned for correction','ถูกส่งกลับมาแก้ไข'),wfText('WEBPARK or Supplier Approve returned these quotations. Correct and submit again.','WEBPARK หรือ Supplier Approve ส่งใบเหล่านี้กลับ แก้ไขแล้วส่งใหม่'),back.length,back.length?deskRequestTable(back,'tasks-back'):deskEmpty(wfText('Nothing returned for correction.','ไม่มีรายการที่ถูกส่งกลับ')),'tasks-back');
+}
+const activeQuoteDeskKey='quote-register';
+const quoteFilterKeys=['format','movement','effectiveFrom','effectiveTo','minPrice','maxPrice'];
+function activeQuoteFilterState(){
+ const state=deskState(activeQuoteDeskKey);
+ if(state.filterAccount!==user.id){
+  state.filterAccount=user.id;state.advanced={};state.advancedOpen=false;state.page=1;
+ }
+ return state;
+}
+function quoteMovement(q){
+ if(!(q.previous>0))return 'first';
+ const change=Number(((q.total-q.previous)/q.previous*100).toFixed(2));
+ return change>0?'up':change<0?'down':'same';
+}
+function matchesActiveQuoteFilters(q,f){
+ return (!f.format||q.format===f.format)&&(!f.movement||quoteMovement(q)===f.movement)
+  &&(!f.effectiveFrom||q.effective>=f.effectiveFrom)&&(!f.effectiveTo||q.effective<=f.effectiveTo)
+  &&(!f.minPrice||q.total>=Number(f.minPrice))&&(!f.maxPrice||q.total<=Number(f.maxPrice));
+}
+function activeQuoteFilterButton(state){
+ const count=quoteFilterKeys.filter(key=>state.advanced[key]).length;
+ return `<button class="button" type="button" data-active-quote-toggle aria-expanded="${state.advancedOpen}" aria-controls="active-quote-advanced">${wfText('Advanced filters','ตัวกรองขั้นสูง')}${count?` <span class="desk-count">${count}</span>`:''}</button>`;
+}
+function activeQuoteFilterPanel(state){
+ const f=state.advanced;
+ const select=(key,label,options)=>`<label>${label}<select name="${key}"><option value="">${wfText('All','ทั้งหมด')}</option>${options.map(([value,caption])=>`<option value="${value}" ${f[key]===value?'selected':''}>${caption}</option>`).join('')}</select></label>`;
+ const input=(key,label,type)=>`<label>${label}<input name="${key}" type="${type}" value="${esc(f[key]||'')}" ${type==='number'?'min="0" step="any" inputmode="decimal"':''}></label>`;
+ return `<form id="active-quote-advanced" class="desk-advanced" ${state.advancedOpen?'':'hidden'}>
+ <div class="desk-advanced-fields">
+  ${select('format',wfText('Form type','ประเภทฟอร์ม'),[['Single Part',wfText('Single Part','ชิ้นส่วน')],['Assembly',wfText('Assembly','ชุดประกอบ')]])}
+  ${select('movement',wfText('Price movement','การเปลี่ยนแปลงราคา'),[['up',wfText('Increased','เพิ่มขึ้น')],['down',wfText('Decreased','ลดลง')],['same',wfText('Unchanged','เท่าเดิม')],['first',wfText('No reference price','ไม่มีราคาอ้างอิง')]])}
+  ${input('effectiveFrom',wfText('Effective date from','วันที่มีผลตั้งแต่'),'date')}
+  ${input('effectiveTo',wfText('Effective date to','วันที่มีผลถึง'),'date')}
+  ${input('minPrice',wfText('Minimum price (THB / pc)','ราคาต่ำสุด (บาท / ชิ้น)'),'number')}
+  ${input('maxPrice',wfText('Maximum price (THB / pc)','ราคาสูงสุด (บาท / ชิ้น)'),'number')}
+ </div><p class="desk-advanced-error" role="alert" hidden></p>
+ <div class="desk-advanced-actions"><button class="button" type="button" data-active-quote-clear>${wfText('Clear filters','ล้างตัวกรอง')}</button><button class="button primary" type="submit">${wfText('Apply filters','ใช้ตัวกรอง')}</button></div></form>`;
+}
+
+document.addEventListener('submit',event=>{
+ const form=event.target;if(form.id!=='active-quote-advanced')return;
+ event.preventDefault();
+ const f=Object.fromEntries(new FormData(form)),error=form.querySelector('[role="alert"]');
+ const invalidDates=f.effectiveFrom&&f.effectiveTo&&f.effectiveFrom>f.effectiveTo;
+ const invalidPrices=f.minPrice&&f.maxPrice&&Number(f.minPrice)>Number(f.maxPrice);
+ if(invalidDates||invalidPrices){
+  error.hidden=false;
+  error.textContent=invalidDates?wfText('Start date must be on or before the end date.','วันที่เริ่มต้นต้องไม่เกินวันที่สิ้นสุด'):wfText('Minimum price must not exceed the maximum price.','ราคาต่ำสุดต้องไม่เกินราคาสูงสุด');
+  return;
+ }
+ const state=activeQuoteFilterState();state.advanced=f;state.page=1;render();
+});
+document.addEventListener('click',event=>{
+ const button=event.target.closest('[data-active-quote-toggle],[data-active-quote-clear]');if(!button)return;
+ const state=activeQuoteFilterState();
+ if(button.hasAttribute('data-active-quote-toggle')){
+  state.advancedOpen=!state.advancedOpen;
+  document.getElementById('active-quote-advanced').hidden=!state.advancedOpen;
+  button.setAttribute('aria-expanded',String(state.advancedOpen));
+ }else{
+  state.advanced={};state.page=1;search='';filterSupplier='';render();
+ }
+});
+
 function workflowQuotes(approval=false,sent=false){
- let pool=visibleQuotes();if(approval)pool=pool.filter(workflowQueue);if(sent)pool=pool.filter(q=>q.trail.some(t=>t.stage==='S-Approve'));
- const rows=pool.filter(q=>(!filterStatus||q.status===filterStatus)&&(!filterSupplier||q.supplier===filterSupplier)&&(!formatFilter||q.format===formatFilter)&&(!priceFilter||priceValidity(q)===priceFilter)&&(!search||[q.id,itemOf(q).code,itemOf(q).name,supplierName(q.supplier)].join(' ').toLowerCase().includes(search.toLowerCase()))).slice().reverse(),key=approval?'quote-approvals':sent?'quote-sent':'quote-register',state=deskState(key),page=deskPage(rows,state);
- const statuses=Object.entries(stageLabels).filter(([status])=>status!=='ROKI Issue'&&(portal==='supplier'||!['Draft','Supplier approval'].includes(status)));
- return heading(wfText('Purchase prices','ราคาซื้อและต้นทุน'),approval?(portal==='roki'?(user.role==='Check'?wfText('My cost checks','งานตรวจต้นทุนของฉัน'):wfText('My final price approvals','งานอนุมัติราคาของฉัน')):user.role==='Issue'?wfText('My cost entries / corrections','งานกรอก / แก้ไขต้นทุน'):wfText('My approvals','งานอนุมัติของฉัน')):sent?wfText('Submitted quotations','ติดตามใบเสนอราคาที่ส่งกลับ'):wfText('Quotation register','ทะเบียนใบเสนอราคา'),approval?wfText('Only work assigned to your current role is shown.','แสดงเฉพาะงานที่ถึงคิวบทบาทปัจจุบันของคุณ'):wfText('Compare calculated purchase prices with the approved reference. Request progress is available in Request tracking.','เปรียบเทียบราคาคำนวณกับราคาอ้างอิง ดูความคืบหน้าของคำขอได้ที่หน้าติดตามคำขอ'))+
- `<section class="panel desk-panel"><div class="desk-filters"><label class="desk-search">${icon('search')}<input id="search" value="${esc(search)}" placeholder="${wfText('Search quotation or part','ค้นหาใบเสนอราคาหรือชิ้นส่วน')}"></label><select id="status-filter"><option value="">${wfText('All statuses','ทุกสถานะ')}</option>${statuses.map(([status,labels])=>`<option value="${status}" ${filterStatus===status?'selected':''}>${wfQuoteLabel(status,labels[0])}</option>`).join('')}</select>${portal==='roki'?`<select id="supplier-filter">${deskSupplierOptions(filterSupplier)}</select>`:''}<select id="price-filter"><option value="">${wfText('All price validity','การมีผลของราคาทั้งหมด')}</option>${[['active','Current effective price','ราคาที่มีผลปัจจุบัน'],['scheduled','Future effective price','ราคาที่อนุมัติล่วงหน้า'],['historical','Historical price','ราคาย้อนหลัง']].map(([value,en,th])=>`<option value="${value}" ${priceFilter===value?'selected':''}>${wfText(en,th)}</option>`).join('')}</select></div>${quoteTable(page.items)}${deskPager(key,rows.length,page.pages)}</section>`;
+ if(approval&&portal==='supplier'&&user.role==='Issue')return supplierIssueTasks();
+ const active=!approval&&!sent;
+ let pool=visibleQuotes();
+ if(approval)pool=pool.filter(workflowQueue);
+ if(sent)pool=pool.filter(q=>['ROKI Issue','ROKI Check','ROKI Approve'].includes(q.status));
+ if(active)pool=pool.filter(q=>q.status==='Approved'&&priceValidity(q)==='active');
+ const key=approval?'quote-approvals':sent?'quote-sent':activeQuoteDeskKey;
+ const state=active?activeQuoteFilterState():deskState(key);
+ if(active){
+  const filterKey=JSON.stringify([search,filterSupplier]);
+  if(state.basicFilterKey!==filterKey){state.basicFilterKey=filterKey;state.page=1}
+ }
+ let rows=pool.filter(q=>(!filterStatus||q.status===filterStatus)&&(!filterSupplier||q.supplier===filterSupplier)&&(!formatFilter||q.format===formatFilter)&&(!priceFilter||priceValidity(q)===priceFilter)&&(!search||[q.id,itemOf(q).code,itemOf(q).name,supplierName(q.supplier)].join(' ').toLowerCase().includes(search.toLowerCase()))&&(!active||matchesActiveQuoteFilters(q,state.advanced))).reverse();
+ if(active){
+  const columns=[q=>quotationIdentity(q)?.code||itemOf(q)?.code,...(portal==='roki'?[q=>supplierName(q.supplier)]:[]),q=>q.previous,q=>q.total,q=>q.previous>0?(q.total-q.previous)/q.previous:null,q=>q.status];
+  rows=window.sortPaginatedRows?.(key,rows,columns)??rows;
+ }
+ const page=deskPage(rows,state);
+ const statuses=Object.entries(stageLabels).filter(([status])=>approval?true:['ROKI Issue','ROKI Check','ROKI Approve'].includes(status));
+ return heading(wfText('Purchase prices','ราคาซื้อและต้นทุน'),approval?(portal==='roki'?(user.role==='Issue'?wfText('My issue queue','งาน Issue ของฉัน'):user.role==='Check'?wfText('My cost checks','งานตรวจต้นทุนของฉัน'):wfText('My final price approvals','งานอนุมัติราคาของฉัน')):user.role==='Issue'?wfText('My cost entries / corrections','งานกรอก / แก้ไขต้นทุน'):wfText('My approvals','งานอนุมัติของฉัน')):sent?(portal==='roki'?wfText('Awaiting WEBPARK action','รอดำเนินการภายใน WEBPARK'):wfText('Sent to WEBPARK','ส่งแล้ว · รอ WEBPARK')):wfText('Quotations in use','ใบเสนอราคาที่กำลังใช้'),approval?wfText('Only work assigned to your current role is shown.','แสดงเฉพาะงานที่ถึงคิวบทบาทปัจจุบันของคุณ'):sent?wfText('Quotations the Supplier has approved and sent back. They wait for WEBPARK Issue, Check or Approve. Your own step is under My tasks.','ใบที่ Supplier อนุมัติและส่งกลับแล้ว รอ WEBPARK Issue / Check / Approve งานของคุณอยู่ที่เมนูงานของฉัน'):wfText('Approved quotations whose price is in effect now. Earlier and future prices are in Reports & history.','ใบที่อนุมัติแล้วและราคามีผลอยู่ตอนนี้ ราคาเก่าและราคาล่วงหน้าดูที่รายงานและประวัติ'))+
+ `<section class="panel desk-panel"><div class="desk-filters"><label class="desk-search">${icon('search')}<input id="search" value="${esc(search)}" placeholder="${wfText('Search quotation or part','ค้นหาใบเสนอราคาหรือชิ้นส่วน')}"></label>${approval||sent?`<select id="status-filter"><option value="">${wfText('All statuses','ทุกสถานะ')}</option>${statuses.map(([status,labels])=>`<option value="${status}" ${filterStatus===status?'selected':''}>${wfQuoteLabel(status,labels[0])}</option>`).join('')}</select>`:''}${portal==='roki'?`<select id="supplier-filter">${deskSupplierOptions(filterSupplier)}</select>`:''}${approval||sent?`<select id="price-filter"><option value="">${wfText('All price validity','การมีผลของราคาทั้งหมด')}</option>${[['active','Current effective price','ราคาที่มีผลปัจจุบัน'],['scheduled','Future effective price','ราคาที่อนุมัติล่วงหน้า'],['historical','Historical price','ราคาย้อนหลัง']].map(([value,en,th])=>`<option value="${value}" ${priceFilter===value?'selected':''}>${wfText(en,th)}</option>`).join('')}</select>`:''}${active?activeQuoteFilterButton(state):''}</div>${active?activeQuoteFilterPanel(state):''}${quoteTable(page.items,active?key:'')}${deskPager(key,rows.length,page.pages)}</section>`;
 }

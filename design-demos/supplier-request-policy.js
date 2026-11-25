@@ -27,12 +27,12 @@ function requestSingleItem(id){
  selected=new Set([id]);render();rfqDraftDialog();
 }
 function requestItemAction(i,{schedules=false,request=null}={}){
- if(request)return `<a class="button" href="#process/${i.id}/${request.id}">${wfText('View details','ดูรายละเอียด')}</a>`;
- const draft=deskDraftFor(i.id),pending=deskPendingPair(i.id),ready=rfqCanCreate()&&!pending&&(!draft||draft.id===request?.id),dueNow=i.next&&i.next<=TODAY&&!deskFirstTime(i);
- if(draft&&!request&&rfqEditable(draft))return `<a class="button primary" href="#request-new/${draft.id}">${wfText('Review and send request','ตรวจและส่งคำขอ')}</a>`;
- if(ready&&(dueNow||!schedules))return `<button class="button primary" data-single-request="${i.id}">${dueNow?wfText('Send review request','ส่งคำขอทบทวนราคา'):wfText('Create request','สร้างคำขอ')}</button>`;
+ if(request)return `<a class="button" href="#part/${i.id}/${request.id}">${wfText('View details','ดูรายละเอียด')}</a>`;
+ const draft=deskDraftFor(i.id),pending=deskPendingPair(i.id),first=deskFirstTime(i),ready=first&&rfqCanCreate()&&!pending&&(!draft||draft.id===request?.id),dueNow=false;   /* a due review is sent by the system; only first-time requests are sent by hand */
+ if(draft&&!request&&first&&rfqEditable(draft))return `<a class="button primary" href="#request-new/${draft.id}">${wfText('Review and send request','ตรวจและส่งคำขอ')}</a>`;
+ if(ready&&(dueNow||!schedules))return `<button class="button primary" data-single-request="${i.id}">${dueNow?wfText('Send review request','ส่งคำขอทบทวนราคา'):wfText('Set schedule','ตั้งกำหนดการ')}</button>`;
  if(schedules&&rfqCanCreate())return `<button class="button" data-schedule="${i.id}">${wfText('Edit schedule','แก้ไขกำหนดการ')}</button>`;
- return approvedReferenceButton(i.id)||`<a class="button" href="#process/${i.id}">${wfText('View details','ดูรายละเอียด')}</a>`;
+ return approvedReferenceButton(i.id)||`<a class="button" href="#part/${i.id}">${wfText('View details','ดูรายละเอียด')}</a>`;
 }
 function requestSelectionContext(){
  const supplier=selectedRequestSupplier();return `<div class="request-selection-context"><strong>${wfText('Send one item using its row button, or select multiple parts for one request.','ส่งรายการเดียวด้วยปุ่มท้ายแถว หรือเลือกหลายชิ้นส่วนเพื่อรวมเป็นคำขอเดียว')}</strong><p>${requestSupplierWarning()} ${supplier?wfText('Selected Supplier: ','Supplier ที่เลือก: ')+esc(supplierName(supplier)):wfText('Select the first part to choose its Supplier.','เลือกชิ้นส่วนแรกเพื่อกำหนดบริษัท Supplier')}</p></div>`;

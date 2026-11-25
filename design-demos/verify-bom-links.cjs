@@ -71,7 +71,7 @@ run('verify-bom-links',async({base,context})=>{
   /* adding an assembly can also create its missing component parts for the supplier */
   await p.goto(base+'roki.html#parts');await p.reload();
   await p.locator('[data-action="add-part"]').click();
-  await p.locator('#pf-code').fill('BOM-ASSY-001');await p.locator('#pf-name').fill('BOM TEST ASSY');await p.locator('#pf-format').selectOption('Assembly');await p.locator('#pf-supplier').selectOption('s2');
+  await p.locator('#pf-code').fill('BOM-ASSY-001');await p.locator('#pf-name').fill('BOM TEST ASSY');await p.locator('#pf-format').selectOption('Assembly');await p.locator('#pf-formula-set').selectOption({index:1});await p.locator('#pf-supplier').selectOption('s2');
   await p.locator('#pf-children').fill('17253-KWN-9000, 2\nBOM-NEW-CHILD, 1');await p.locator('#pf-create-children').check();
   await p.locator('[data-action="save-part"]').click();await p.locator('.dialog').waitFor({state:'detached'});
   const d=await store(p),kids=d.items.filter(i=>i.supplier==='s2'&&['17253-KWN-9000','BOM-NEW-CHILD'].includes(i.code));

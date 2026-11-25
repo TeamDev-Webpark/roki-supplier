@@ -5,7 +5,7 @@ run('connected demo data, migration and all role menus',async({base,context})=>{
   await context.route('https://fonts.googleapis.com/**',r=>r.fulfill({status:200,contentType:'text/css',body:''}));
   const p=await context.newPage();await login(p,base,'roki','r-issue','request-register');
   const first=await store(p);
-  assert.equal(first.demoDataVersion,2);
+  assert.equal(first.demoDataVersion,3);
   for(const status of ['Draft','Returned','Pending Check','Pending Approve','Approved','Rejected','Cancelled'])assert(first.priceRequests.some(r=>r.approvalStatus===status&&r.deliveryStatus==='NotSent'),status);
   for(const supplier of ['s1','s2','s3']){
     for(const status of ['Draft','Supplier approval','ROKI Issue','ROKI Check','ROKI Approve','Approved','Reverted','Rejected'])assert(first.quotes.some(q=>q.supplier===supplier&&q.status===status),supplier+' '+status);

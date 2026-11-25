@@ -14,7 +14,8 @@ Run `npm run verify:operations-desk` for planning-list separation, request-stage
 
 `supplier-request-policy.js` adds per-row review dispatch and enforces one Supplier company per new request. Selecting a first part locks bulk selection to that company; clearing unlocks it. The request dialog names the recipient and item count. Save and dispatch independently validate company consistency before side effects. A multi-part request produces one delivery with a separate fixed cost form per part. Previously sent historical requests are retained. Run `npm run verify:supplier-request-policy` for these checks.
 
-Current workflow: **WEBPARK Issue selects parts and formula versions → sends blank cost forms directly → Supplier Issue enters costs → Supplier Approve submits → WEBPARK Check → WEBPARK Approve**.
+Current workflow: **the system sends the price request to the Supplier automatically when an item's review is due** (`auto-requests.js`; WEBPARK Issue does not send it; a first-time part is still requested by hand from **First-time request**). Then **1. Supplier Issue → 2. Supplier Approve → 3. WEBPARK Issue → 4. WEBPARK Check → 5. WEBPARK Approve**. The first sidebar entry of every account is its own task queue (Pending issues / checks / approvals, or Cost entry tasks for Supplier Issue). Each list shows one kind of work: *Waiting for Supplier*, *Submitted · awaiting WEBPARK*, *Completed quotations*, *All requests* (with stage tabs).  
+The quotation workflow has exactly five steps: **1 Supplier Issue (enter costs) → 2 Supplier Approve (verify and send back) → 3 WEBPARK Issue (check the data) → 4 WEBPARK Check (costs and price) → 5 WEBPARK Approve (purchase price)**. Setting the review schedule is not a step. A part's **formula set is chosen once when the part is added** and is read-only on the schedule form; the review interval is chosen on that form. Every form has a **Fill sample data** button for presentations.
 
 See [WORKFLOW.md](WORKFLOW.md) for the current Thai user guide. The following implementation history includes earlier workflows and is superseded by the direct sourcing flow.
 
@@ -34,6 +35,8 @@ python3 -m http.server 4173 --bind 127.0.0.1 --directory design-demos
 - Supplier portal: http://localhost:4173/supplier.html
 
 Use the same host and port for both portals so browser storage is shared. Select an individual demo account to enter. Switch account to exercise each role. Separate session keys preserve independent ROKI and Supplier sessions; using two browser tabs makes the flow easiest to follow.
+
+For a live approval demo, keep both portals in the **same browser profile** and use the same URL origin. Open the Supplier approval queue after Supplier Issue submits, then the WEBPARK Check and Approve queues. At each step, open the quotation, tick the confirmation and confirm. Open queues update as the action is saved. Sharing the LAN URL lets other devices open the demo, but their browser-local records do not synchronize with yours. `node verify-approval-handoff.cjs` checks the role handoffs, duplicate confirmation, and save-error recovery.
 
 ## Implemented demo behavior
 
